@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Valorant GM - Dashboard</title>
+  <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+</head>
+<body class="bg-gray-100 text-gray-800">
+  <header class="bg-white border-b border-gray-300 p-4 flex justify-between items-center">
+    <h1 class="text-2xl font-bold">Valorant GM</h1>
+    <nav class="space-x-4 text-sm">
+      <a href="index.html" class="text-blue-600 font-semibold">Dashboard</a>
+      <a href="elenco.html" class="hover:underline">Elenco</a>
+      <a href="mercado.html" class="hover:underline">Mercado</a>
+      <a href="simulacao.html" class="hover:underline">Simulação</a>
+      <a href="calendario.html" class="hover:underline">Calendário</a>
+      <a href="estatisticas.html" class="hover:underline">Estatísticas</a>
+      <a href="financas.html" class="hover:underline">Finanças</a>
+      <a href="configuracoes.html" class="hover:underline">Configurações</a>
+    </nav>
+  </header>
+
+  <main class="p-6 max-w-6xl mx-auto">
+    <!-- DASHBOARD -->
+    <section class="mb-6">
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div class="bg-white p-4 shadow-sm rounded border border-gray-200">
+          <h2 class="font-bold text-lg mb-2">Resumo</h2>
+          <p><strong>Posição:</strong> 3º - 12V 5D</p>
+          <p><strong>Último jogo:</strong> Vitória 13-10 vs DRX</p>
+          <p><strong>Próximo jogo:</strong> vs Sentinels (2 dias)</p>
+        </div>
+
+        <div class="bg-white p-4 shadow-sm rounded border border-gray-200">
+          <h2 class="font-bold text-lg mb-2">Ações</h2>
+          <div class="flex flex-col space-y-2">
+            <button class="bg-blue-600 text-white px-4 py-2 rounded">Simular Jogo</button>
+            <button class="bg-gray-600 text-white px-4 py-2 rounded">Ver Elenco</button>
+            <button class="bg-green-600 text-white px-4 py-2 rounded">Ir ao Mercado</button>
+          </div>
+        </div>
+
+        <div class="bg-white p-4 shadow-sm rounded border border-gray-200">
+          <h2 class="font-bold text-lg mb-2">Top Jogadores</h2>
+          <ul class="text-sm space-y-1">
+            <li><strong>K3nny</strong> - KDA: 1.42 | Clutch: 65%</li>
+            <li><strong>Fr4gGod</strong> - KDA: 1.38 | Clutch: 58%</li>
+            <li><strong>Aimless</strong> - KDA: 1.22 | Clutch: 61%</li>
+          </ul>
+        </div>
+      </div>
+    </section>
+
+    <section class="bg-white p-4 shadow-sm rounded border border-gray-200">
+      <h2 class="font-bold text-lg mb-2">Notícias Recentes</h2>
+      <ul class="list-disc list-inside text-sm space-y-1">
+        <li>Jogador "S4lv4dor" sofreu lesão na mão - fora por 1 semana.</li>
+        <li>Atualização nas regras do torneio internacional.</li>
+        <li>Mercado abrirá para novas contratações em 3 dias.</li>
+      </ul>
+    </section>
+
+    <!-- ESQUELETOS DAS OUTRAS PÁGINAS -->
+    <section class="mt-12">
+      <h2 class="text-xl font-bold mb-4">Protótipos das Outras Páginas</h2>
+
+      <!-- Elenco -->
+      <div class="bg-white p-4 mb-6 rounded border">
+        <h3 class="font-semibold text-lg mb-2">Elenco</h3>
+        <p>Listagem dos jogadores com nome, idade, função, overall e botão de gerenciamento.</p>
+      </div>
+
+      <!-- Mercado -->
+      <div class="bg-white p-4 mb-6 rounded border">
+        <h3 class="font-semibold text-lg mb-2">Mercado</h3>
+        <p>Lista de jogadores disponíveis para contratação, com filtros e valores de mercado.</p>
+      </div>
+
+      <!-- Simulação -->
+      <div class="bg-white p-4 mb-6 rounded border">
+        <h3 class="font-semibold text-lg mb-2">Simulação</h3>
+        <p>Botões para simular partidas, rodadas ou temporada inteira. Histórico de resultados.</p>
+      </div>
+
+      <!-- Calendário -->
+      <div class="bg-white p-4 mb-6 rounded border">
+        <h3 class="font-semibold text-lg mb-2">Calendário</h3>
+        <p>Visualização de partidas da temporada semana por semana.</p>
+      </div>
+
+      <!-- Estatísticas -->
+      <div class="bg-white p-4 mb-6 rounded border">
+        <h3 class="font-semibold text-lg mb-2">Estatísticas</h3>
+        <p>Gráficos ou tabelas com stats individuais e por time: KDA, clutch, winrate, etc.</p>
+      </div>
+
+      <!-- Finanças -->
+      <div class="bg-white p-4 mb-6 rounded border">
+        <h3 class="font-semibold text-lg mb-2">Finanças</h3>
+        <p>Resumo de orçamento, folha salarial, ganhos com torneios e patrocinadores.</p>
+      </div>
+
+      <!-- Configurações -->
+      <div class="bg-white p-4 rounded border">
+        <h3 class="font-semibold text-lg mb-2">Configurações</h3>
+        <p>Nome do time, logo, esquema de cores, botão para salvar/loadar progresso.</p>
+      </div>
+
+      <div id="orcamento-display" class="mb-4 text-lg font-semibold text-green-700"></div>
+    </section>
+  </main>
+
+  <footer class="text-center text-xs text-gray-500 mt-8 mb-4">
+    Valorant GM &copy; 2025 - Projeto inspirado em Basketball GM
+  </footer>
+  <script src="assets/js/jogadores.js"></script>
+  <script src="assets/js/main.js"></script>
+</body>
+</html>
