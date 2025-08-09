@@ -68,16 +68,36 @@ if (configForm) {
 // --- CALCULAR RATING ---
 // Função para calcular rating ponderado
 function calcularRating(jogador) {
+  // Normaliza cada atributo para 0-1
+  function norm(val) {
+    return Math.max(0, Math.min(1, (val - 60) / 40)); // Assume atributos entre 60 e 100
+  }
+
   const pesos = PESOS_ATRIBUTOS[jogador.funcao] || PESOS_ATRIBUTOS.Duelista;
 
-  return Math.round(
-    jogador.mira * pesos.mira +
-      jogador.clutch * pesos.clutch +
-      jogador.suporte * pesos.suporte +
-      jogador.hs * pesos.hs +
-      jogador.movimentacao * pesos.movimentacao +
-      jogador.agressividade * pesos.agressividade
-  );
+  // Rating base pelos atributos principais
+  let ratingBase =
+    norm(jogador.mira) * pesos.mira +
+    norm(jogador.clutch) * pesos.clutch +
+    norm(jogador.suporte) * pesos.suporte +
+    norm(jogador.hs) * pesos.hs +
+    norm(jogador.movimentacao) * pesos.movimentacao +
+    norm(jogador.agressividade) * pesos.agressividade;
+
+  // Se houver estatísticas recentes, bonifica o rating
+  let bonus = 0;
+  if (jogador.stats && jogador.stats.kd) {
+    bonus += Math.max(0, Math.min(0.15, (parseFloat(jogador.stats.kd) - 1) * 0.1));
+  }
+  if (jogador.stats && jogador.stats.kills) {
+    bonus += Math.max(0, Math.min(0.1, (parseInt(jogador.stats.kills) - 10) * 0.01));
+  }
+
+  // Rating final entre RATING_MIN e RATING_MAX
+  let ratingFinal = RATING_MIN + (RATING_MAX - RATING_MIN) * (ratingBase + bonus);
+  ratingFinal = Math.max(RATING_MIN, Math.min(RATING_MAX, Math.round(ratingFinal)));
+
+  return ratingFinal;
 }
 
 const RATING_MIN = 40; // Jogador muito ruim
@@ -92,58 +112,116 @@ function renderElenco() {
   if (!list) return;
 
   const jogadores = JSON.parse(localStorage.getItem("elenco")) || [];
+  let titulares = JSON.parse(localStorage.getItem("titulares")) || [];
 
-  list.innerHTML = "";
+  // Remove titulares que não estão mais no elenco
+  titulares = titulares.filter((nome) =>
+    jogadores.some((j) => j.nome === nome)
+  );
 
-  if (jogadores.length === 0) {
-    list.innerHTML = "<p>Nenhum jogador contratado ainda.</p>";
-    return;
+  // Se titulares não estiverem definidos, define os 5 primeiros
+  if (titulares.length === 0 && jogadores.length > 0) {
+    titulares = jogadores.slice(0, 5).map((j) => j.nome);
+    localStorage.setItem("titulares", JSON.stringify(titulares));
+  } else {
+    localStorage.setItem("titulares", JSON.stringify(titulares));
   }
 
+  list.innerHTML = `
+    <h3 class="font-bold mb-2">Titulares</h3>
+    <div id="titulares-list" class="flex flex-col gap-2 mb-4"></div>
+    <h3 class="font-bold mb-2">Banco</h3>
+    <div id="banco-list" class="flex flex-col gap-2"></div>
+  `;
+
+  const titularesList = list.querySelector("#titulares-list");
+  const bancoList = list.querySelector("#banco-list");
+
   jogadores.forEach((jogador, index) => {
+    const isTitular = titulares.includes(jogador.nome);
     const div = document.createElement("div");
     div.className =
       "bg-white border rounded p-4 flex justify-between items-center";
     div.innerHTML = `
-  <div class="flex items-center gap-2">
-    <div class="bg-gray-700 rounded-lg p-1">
-      <img class="mb-11.5 h-12 dark:hidden" src="assets/img/${
-        jogador.nome
-      }.png" alt="">
-    </div>
-    <strong>${jogador.nome}</strong> 
-    <span title="Rating" class="text-blue-600 font-medium tooltip">${
-      jogador.rating
-    }</span>
-    <div title="Função" class="tooltip">(${
-      jogador.funcao
-    })</div>- <div title="Idade" class="tooltip">${
+      <div class="flex items-center gap-2">
+        <div class="bg-gray-700 rounded-lg p-1">
+          <img class="mb-11.5 h-12 dark:hidden" src="assets/img/${
+            jogador.nome
+          }.png" alt="">
+        </div>
+        <strong>${jogador.nome}</strong> 
+        <span title="Rating" class="text-blue-600 font-medium tooltip">${
+          jogador.rating
+        }</span>
+        <div title="Função" class="tooltip">(${
+          jogador.funcao
+        })</div>- <div title="Idade" class="tooltip">${
       jogador.idade || "?"
     } anos </div> 
-    <div class="text-xs bg-purple-100 text-purple-800 px-2 py-1 rounded"">${
-      jogador.stats || "Sem estatísticas"
-    }</div>
-  </div>
-  <div class="flex flex-col items-end gap-2">
-    <button data-index="${index}" class="liberar-btn bg-red-600 text-white px-3 py-1 rounded hover:bg-red-700">Liberar</button>
-  </div>
-`;
-    list.appendChild(div);
+        <div class="text-xs bg-purple-100 text-purple-800 px-2 py-1 rounded">${
+          jogador.stats || "Sem estatísticas"
+        }</div>
+      </div>
+      <div class="flex flex-col items-end gap-2">
+        <button data-index="${index}" class="liberar-btn bg-red-600 text-white px-3 py-1 rounded hover:bg-red-700">Liberar</button>
+        <button data-index="${index}" class="mover-btn bg-blue-600 text-white px-3 py-1 rounded hover:bg-blue-700">
+          ${isTitular ? "Colocar no banco" : "Colocar como titular"}
+        </button>
+      </div>
+    `;
+    if (isTitular) {
+      titularesList.appendChild(div);
+    } else {
+      bancoList.appendChild(div);
+    }
   });
 
-  // Evento para mostrar/esconder detalhes do jogador
-  document.querySelectorAll(".toggle-details").forEach((btn) => {
+  // Evento para liberar jogador do elenco
+  list.querySelectorAll(".liberar-btn").forEach((btn) => {
     btn.addEventListener("click", () => {
-      const detail = btn.closest("div").querySelector("div.text-sm");
-      if (detail) detail.classList.toggle("hidden");
+      const idx = parseInt(btn.dataset.index);
+      // Remove do array de titulares se estiver
+      let jogadores = JSON.parse(localStorage.getItem("elenco")) || [];
+      let titulares = JSON.parse(localStorage.getItem("titulares")) || [];
+      const jogador = jogadores[idx];
+      if (!jogador) return;
+      titulares = titulares.filter((n) => n !== jogador.nome);
+      localStorage.setItem("titulares", JSON.stringify(titulares));
+      liberarJogador(idx);
     });
   });
 
-  // Evento para liberar jogador do elenco (devolver ao mercado)
-  document.querySelectorAll(".liberar-btn").forEach((btn) => {
+  // Evento para mover jogador entre titular e banco
+  list.querySelectorAll(".mover-btn").forEach((btn) => {
     btn.addEventListener("click", () => {
       const idx = parseInt(btn.dataset.index);
-      liberarJogador(idx);
+      const jogadores = JSON.parse(localStorage.getItem("elenco")) || [];
+      let titulares = JSON.parse(localStorage.getItem("titulares")) || [];
+      const jogador = jogadores[idx];
+      if (!jogador) return;
+
+      if (titulares.includes(jogador.nome)) {
+        // Confirmação antes de mover para o banco
+        if (
+          !window.confirm(
+            `Tem certeza que deseja colocar ${jogador.nome} no banco?`
+          )
+        ) {
+          return;
+        }
+        // Remover dos titulares
+        titulares = titulares.filter((n) => n !== jogador.nome);
+        localStorage.setItem("titulares", JSON.stringify(titulares));
+      } else {
+        // Adicionar aos titulares (máx 5)
+        if (titulares.length >= 5) {
+          alert("Só é possível ter 5 titulares!");
+          return;
+        }
+        titulares.push(jogador.nome);
+        localStorage.setItem("titulares", JSON.stringify(titulares));
+      }
+      renderElenco();
     });
   });
 }
@@ -500,3 +578,200 @@ jogadoresMercado.forEach((jogador) => {
   }
 });
 salvarMercado();
+
+// --- SIMULAÇÃO DE PARTIDA ---
+
+// --- SIMULAÇÃO ---
+
+// Botão para simular partida
+const simularBtn = document.querySelector("#btn-simular");
+if (simularBtn) {
+  simularBtn.addEventListener("click", () => {
+    const elenco = JSON.parse(localStorage.getItem("elenco")) || [];
+
+    if (elenco.length < 5) {
+      alert(
+        "Você precisa ter pelo menos 5 jogadores no elenco para simular uma partida!"
+      );
+      return;
+    }
+
+    const resultadoSimulacao = simularPartida(elenco);
+
+    if (resultadoSimulacao.resultado === "Erro") {
+      alert(resultadoSimulacao.mensagem);
+      return;
+    }
+
+    salvarSimulacao(resultadoSimulacao);
+    renderSimulacao(resultadoSimulacao);
+    renderHistoricoSimulacoes();
+  });
+}
+
+// Função que limita o K/D por player
+function calcularKDlimitado(kills, deaths) {
+  // Garante que deaths seja no mínimo 1 para evitar divisão por zero
+  deaths = Math.max(1, deaths);
+
+  // Calcula o K/D bruto
+  const kdBruto = kills / deaths;
+
+  // Aplica os limites (0.20 a 4.75)
+  return Math.max(0.7, Math.min(kdBruto, 1.95));
+}
+
+// Função para calcular rating médio do time
+function calcularRatingTime() {
+  const elenco = JSON.parse(localStorage.getItem("elenco")) || [];
+  if (elenco.length === 0) return 0; // Retorna 0 se não houver elenco
+
+  return (
+    elenco.reduce((total, jogador) => {
+      return total + (jogador.rating || calcularRating(jogador));
+    }, 0) / elenco.length
+  );
+}
+
+// Função que simula uma partida
+function simularPartida() {
+  // Busca titulares no localStorage
+  const elenco = JSON.parse(localStorage.getItem("elenco")) || [];
+  const titularesNomes = JSON.parse(localStorage.getItem("titulares")) || [];
+  // Filtra os objetos dos titulares
+  const titulares = elenco.filter((j) => titularesNomes.includes(j.nome));
+
+  if (titulares.length < 5) {
+    return {
+      resultado: "Erro",
+      mensagem: "Você precisa de pelo menos 5 titulares para simular",
+      roundsTime: 0,
+      roundsAdversario: 0,
+      estatisticas: [],
+    };
+  }
+
+  // Calcula força dos times
+  const ratingTime =
+    titulares.reduce((total, jogador) => {
+      return total + (jogador.rating || calcularRating(jogador));
+    }, 0) / titulares.length;
+  const ratingAdv = 65 + Math.random() * 20; // Adversário entre 65-85
+
+  // Define chance de vitória por round
+  const roundWinChance = 0.4 + (ratingTime - ratingAdv) * 0.01;
+
+  // Simula rounds
+  let roundsTime = 0;
+  let roundsAdversario = 0;
+
+  while (
+    roundsTime < 13 &&
+    roundsAdversario < 13 &&
+    !(roundsTime === 12 && roundsAdversario === 12)
+  ) {
+    Math.random() < roundWinChance ? roundsTime++ : roundsAdversario++;
+  }
+
+  // Overtime se empate em 12-12
+  if (roundsTime === 12 && roundsAdversario === 12) {
+    let otWins = 0;
+    while (Math.abs(otWins) < 2) {
+      Math.random() < roundWinChance ? otWins++ : otWins--;
+    }
+    otWins > 0 ? (roundsTime += 1) : (roundsAdversario += 1);
+  }
+
+  // Gera estatísticas individuais
+  const estatisticas = titulares.map((jogador) => {
+    const kills = Math.floor(Math.random() * 20);
+    const deaths = Math.floor(Math.random() * 15);
+    const assists = Math.floor(Math.random() * 10);
+    const kd = calcularKDlimitado(kills, deaths);
+
+    return {
+      nome: jogador.nome,
+      funcao: jogador.funcao,
+      kills,
+      deaths,
+      assists,
+      kd: kd.toFixed(2),
+      rating: jogador.rating,
+    };
+  });
+
+  return {
+    resultado: roundsTime > roundsAdversario ? "Vitória" : "Derrota",
+    roundsTime,
+    roundsAdversario,
+    estatisticas,
+  };
+}
+
+// Salva a simulação no histórico (localStorage)
+function salvarSimulacao(simulacao) {
+  const historico = JSON.parse(localStorage.getItem("simulacoes")) || [];
+  historico.push(simulacao);
+  localStorage.setItem("simulacoes", JSON.stringify(historico));
+}
+
+// Renderiza o resultado da simulação na tela
+function renderSimulacao(simulacao) {
+  const container = document.getElementById("resultado-simulacao");
+  const dados = document.getElementById("dados-simulacao");
+  if (!container || !dados) return;
+
+  container.classList.remove("hidden");
+
+  dados.innerHTML = `
+    <p class="mb-2"><strong>Resultado:</strong> ${simulacao.resultado}</p>
+    <p class="mb-4">Placar: ${simulacao.roundsTime} x ${
+    simulacao.roundsAdversario
+  }</p>
+    <ul class="list-disc list-inside space-y-1">
+      ${simulacao.estatisticas
+        .map(
+          (j) =>
+            `<li>${j.nome} (${j.funcao}) - ${j.kills}K / ${j.assists}A / ${j.deaths}D | K/D: ${j.kd}</li>`
+        )
+        .join("")}
+    </ul>
+  `;
+}
+
+// Renderiza o histórico de simulações na lista do HTML
+function renderHistoricoSimulacoes() {
+  const lista = document.getElementById("lista-simulacoes");
+  if (!lista) return;
+  const historico = JSON.parse(localStorage.getItem("simulacoes")) || [];
+
+  lista.innerHTML = "";
+
+  // Exibe o histórico em ordem reversa (mais recente primeiro)
+  historico
+    .slice()
+    .reverse()
+    .forEach((sim, index) => {
+      const item = document.createElement("li");
+      item.className = "bg-gray-50 p-3 rounded border";
+      item.innerHTML = `
+      <p class="font-semibold">${sim.resultado} - Placar: ${sim.roundsTime} x ${sim.roundsAdversario}</p>
+    `;
+      lista.appendChild(item);
+    });
+}
+
+const btnLimparHistorico = document.querySelector("#btn-resetar-historico");
+if (btnLimparHistorico) {
+  btnLimparHistorico.addEventListener("click", () => {
+    if (
+      confirm("Tem certeza que deseja limpar todo o histórico de simulações?")
+    ) {
+      localStorage.removeItem("simulacoes");
+      renderHistoricoSimulacoes();
+      // Também escondemos o resultado atual da simulação, se quiser:
+      const container = document.getElementById("resultado-simulacao");
+      if (container) container.classList.add("hidden");
+    }
+  });
+}
