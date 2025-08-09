@@ -87,15 +87,25 @@ function calcularRating(jogador) {
   // Se houver estatísticas recentes, bonifica o rating
   let bonus = 0;
   if (jogador.stats && jogador.stats.kd) {
-    bonus += Math.max(0, Math.min(0.15, (parseFloat(jogador.stats.kd) - 1) * 0.1));
+    bonus += Math.max(
+      0,
+      Math.min(0.15, (parseFloat(jogador.stats.kd) - 1) * 0.1)
+    );
   }
   if (jogador.stats && jogador.stats.kills) {
-    bonus += Math.max(0, Math.min(0.1, (parseInt(jogador.stats.kills) - 10) * 0.01));
+    bonus += Math.max(
+      0,
+      Math.min(0.1, (parseInt(jogador.stats.kills) - 10) * 0.01)
+    );
   }
 
   // Rating final entre RATING_MIN e RATING_MAX
-  let ratingFinal = RATING_MIN + (RATING_MAX - RATING_MIN) * (ratingBase + bonus);
-  ratingFinal = Math.max(RATING_MIN, Math.min(RATING_MAX, Math.round(ratingFinal)));
+  let ratingFinal =
+    RATING_MIN + (RATING_MAX - RATING_MIN) * (ratingBase + bonus);
+  ratingFinal = Math.max(
+    RATING_MIN,
+    Math.min(RATING_MAX, Math.round(ratingFinal))
+  );
 
   return ratingFinal;
 }
@@ -611,14 +621,10 @@ if (simularBtn) {
 
 // Função que limita o K/D por player
 function calcularKDlimitado(kills, deaths) {
-  // Garante que deaths seja no mínimo 1 para evitar divisão por zero
   deaths = Math.max(1, deaths);
-
-  // Calcula o K/D bruto
   const kdBruto = kills / deaths;
-
-  // Aplica os limites (0.20 a 4.75)
-  return Math.max(0.7, Math.min(kdBruto, 1.95));
+  // Novo limite mais realista
+  return Math.max(0.5, Math.min(kdBruto, 3.5));
 }
 
 // Função para calcular rating médio do time
@@ -631,6 +637,144 @@ function calcularRatingTime() {
       return total + (jogador.rating || calcularRating(jogador));
     }, 0) / elenco.length
   );
+}
+
+function gerarEstatisticasJogador(jogador, resultadoTime) {
+  // Base para kills e deaths depende do rating e função
+  const baseKills = 10 + (jogador.rating - 60) * 0.5;
+  const baseDeaths = 10 - (jogador.rating - 60) * 0.2;
+  const baseAssists = 3 + (jogador.suporte - 60) * 0.08;
+
+  // Função influencia
+  let killBonus = 0,
+    deathBonus = 0,
+    assistBonus = 0;
+  switch (jogador.funcao) {
+    case "Duelista":
+      killBonus += 3;
+      deathBonus += 1;
+      break;
+    case "Sentinela":
+      deathBonus -= 2;
+      assistBonus += 1;
+      break;
+    case "Controlador":
+      assistBonus += 2;
+      break;
+    case "Iniciador":
+      assistBonus += 2;
+      break;
+  }
+
+  // Se o time venceu, melhora stats
+  if (resultadoTime === "Vitória") {
+    killBonus += 2;
+    deathBonus -= 1;
+  }
+
+  // Randomização controlada
+  const kills = Math.max(
+    2,
+    Math.round(baseKills + killBonus + Math.random() * 4 - 2)
+  );
+  const deaths = Math.max(
+    1,
+    Math.round(baseDeaths + deathBonus + Math.random() * 3 - 1)
+  );
+  const assists = Math.max(
+    0,
+    Math.round(baseAssists + assistBonus + Math.random() * 2)
+  );
+
+  // Calcula K/D limitado
+  const kd = calcularKDlimitado(kills, deaths);
+
+  return {
+    nome: jogador.nome,
+    funcao: jogador.funcao,
+    kills,
+    deaths,
+    assists,
+    kd: kd.toFixed(2),
+    rating: jogador.rating,
+  };
+}
+
+// Gera estatísticas sincronizadas com o placar
+function gerarEstatisticasSincronizadas(
+  titulares,
+  roundsTime,
+  roundsAdversario
+) {
+  // Estima kills totais do time: cada round vencido ~2 kills por jogador
+  const totalRounds = roundsTime + roundsAdversario;
+  const totalKillsTime =
+    Math.round(roundsTime * 2.5 + roundsAdversario * 1.2) * titulares.length;
+  const totalDeathsTime =
+    Math.round(roundsAdversario * 2.2 + roundsTime * 1.1) * titulares.length;
+
+  // Distribui kills/deaths proporcional ao rating e função
+  let somaRating = titulares.reduce((s, j) => s + j.rating, 0);
+  let killsDistribuidos = 0,
+    deathsDistribuidos = 0;
+  const stats = titulares.map((jogador) => {
+    // Proporção de kills/deaths por rating
+    const killShare = jogador.rating / somaRating;
+    const deathShare = (100 - jogador.rating) / (titulares.length * 100);
+
+    // Função influencia
+    let killBonus = 0,
+      deathBonus = 0,
+      assistBonus = 0;
+    switch (jogador.funcao) {
+      case "Duelista":
+        killBonus += 2;
+        deathBonus += 1;
+        break;
+      case "Sentinela":
+        deathBonus -= 1;
+        assistBonus += 1;
+        break;
+      case "Controlador":
+        assistBonus += 2;
+        break;
+      case "Iniciador":
+        assistBonus += 2;
+        break;
+    }
+
+    // Kills e deaths proporcionais + variação
+    let kills = Math.round(
+      (totalKillsTime * killShare) / titulares.length +
+        killBonus +
+        Math.random() * 3 -
+        1.5
+    );
+    let deaths = Math.round(
+      totalDeathsTime * deathShare + deathBonus + Math.random() * 2 - 1
+    );
+    let assists = Math.max(0, Math.round(3 + assistBonus + Math.random() * 3));
+
+    kills = Math.max(2, kills);
+    deaths = Math.max(1, deaths);
+
+    killsDistribuidos += kills;
+    deathsDistribuidos += deaths;
+
+    return {
+      nome: jogador.nome,
+      funcao: jogador.funcao,
+      kills,
+      deaths,
+      assists,
+      kd: calcularKDlimitado(kills, deaths).toFixed(2),
+      rating: jogador.rating,
+    };
+  });
+
+  // Ajuste final para garantir que a soma dos kills não seja absurda
+  // (opcional: pode balancear para que o total de kills seja próximo ao totalKillsTime)
+  return stats;
 }
 
 // Função que simula uma partida
@@ -682,23 +826,12 @@ function simularPartida() {
     otWins > 0 ? (roundsTime += 1) : (roundsAdversario += 1);
   }
 
-  // Gera estatísticas individuais
-  const estatisticas = titulares.map((jogador) => {
-    const kills = Math.floor(Math.random() * 20);
-    const deaths = Math.floor(Math.random() * 15);
-    const assists = Math.floor(Math.random() * 10);
-    const kd = calcularKDlimitado(kills, deaths);
-
-    return {
-      nome: jogador.nome,
-      funcao: jogador.funcao,
-      kills,
-      deaths,
-      assists,
-      kd: kd.toFixed(2),
-      rating: jogador.rating,
-    };
-  });
+  // Gera estatísticas sincronizadas
+  const estatisticas = gerarEstatisticasSincronizadas(
+    titulares,
+    roundsTime,
+    roundsAdversario
+  );
 
   return {
     resultado: roundsTime > roundsAdversario ? "Vitória" : "Derrota",
