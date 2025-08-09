@@ -121,8 +121,8 @@ function getMediaKD(nomeJogador) {
   let somaKD = 0;
   let partidas = 0;
 
-  historico.forEach(simulacao => {
-    simulacao.estatisticas.forEach(j => {
+  historico.forEach((simulacao) => {
+    simulacao.estatisticas.forEach((j) => {
       if (j.nome === nomeJogador && j.kd) {
         somaKD += parseFloat(j.kd);
         partidas++;
@@ -166,7 +166,7 @@ function renderElenco() {
   const bancoList = list.querySelector("#banco-list");
 
   jogadores.forEach((jogador, index) => {
-      const mediaKD = getMediaKD(jogador.nome);
+    const mediaKD = getMediaKD(jogador.nome);
     const isTitular = titulares.includes(jogador.nome);
     const div = document.createElement("div");
     div.className =
@@ -209,11 +209,20 @@ function renderElenco() {
   list.querySelectorAll(".liberar-btn").forEach((btn) => {
     btn.addEventListener("click", () => {
       const idx = parseInt(btn.dataset.index);
-      // Remove do array de titulares se estiver
       let jogadores = JSON.parse(localStorage.getItem("elenco")) || [];
       let titulares = JSON.parse(localStorage.getItem("titulares")) || [];
       const jogador = jogadores[idx];
       if (!jogador) return;
+
+      // Adiciona confirmação antes de liberar
+      if (
+        !window.confirm(
+          `Tem certeza que deseja liberar ${jogador.nome} do elenco?`
+        )
+      ) {
+        return;
+      }
+
       titulares = titulares.filter((n) => n !== jogador.nome);
       localStorage.setItem("titulares", JSON.stringify(titulares));
       liberarJogador(idx);
@@ -643,7 +652,7 @@ function calcularKDlimitado(kills, deaths) {
   deaths = Math.max(1, deaths);
   const kdBruto = kills / deaths;
   // Novo limite mais realista
-  return Math.max(0.5, Math.min(kdBruto, 3.5));
+  return Math.max(0.4, Math.min(kdBruto, 3.5));
 }
 
 // Função para calcular rating médio do time
@@ -898,6 +907,20 @@ function renderHistoricoSimulacoes() {
   const historico = JSON.parse(localStorage.getItem("simulacoes")) || [];
 
   lista.innerHTML = "";
+
+  // Conta vitórias e derrotas
+  let vitorias = 0,
+    derrotas = 0;
+  historico.forEach((sim) => {
+    if (sim.resultado === "Vitória") vitorias++;
+    if (sim.resultado === "Derrota") derrotas++;
+  });
+
+  // Adiciona resumo no topo
+  const resumo = document.createElement("div");
+  resumo.className = "mb-3 font-semibold";
+  resumo.innerHTML = `Vitórias: <span class="text-green-600">${vitorias}</span> &nbsp; | &nbsp; Derrotas: <span class="text-red-600">${derrotas}</span>`;
+  lista.appendChild(resumo);
 
   // Exibe o histórico em ordem reversa (mais recente primeiro)
   historico
