@@ -116,6 +116,24 @@ const RATING_IMPACT = 0.015; // Quanto cada ponto de rating afeta a performance
 
 // --- ELENCO ---
 
+function getMediaKD(nomeJogador) {
+  const historico = JSON.parse(localStorage.getItem("simulacoes")) || [];
+  let somaKD = 0;
+  let partidas = 0;
+
+  historico.forEach(simulacao => {
+    simulacao.estatisticas.forEach(j => {
+      if (j.nome === nomeJogador && j.kd) {
+        somaKD += parseFloat(j.kd);
+        partidas++;
+      }
+    });
+  });
+
+  if (partidas === 0) return null;
+  return (somaKD / partidas).toFixed(2);
+}
+
 // Renderiza lista de jogadores contratados (elenco)
 function renderElenco() {
   const list = document.querySelector("#player-list");
@@ -148,6 +166,7 @@ function renderElenco() {
   const bancoList = list.querySelector("#banco-list");
 
   jogadores.forEach((jogador, index) => {
+      const mediaKD = getMediaKD(jogador.nome);
     const isTitular = titulares.includes(jogador.nome);
     const div = document.createElement("div");
     div.className =
@@ -168,9 +187,9 @@ function renderElenco() {
         })</div>- <div title="Idade" class="tooltip">${
       jogador.idade || "?"
     } anos </div> 
-        <div class="text-xs bg-purple-100 text-purple-800 px-2 py-1 rounded">${
-          jogador.stats || "Sem estatísticas"
-        }</div>
+        <div class="text-xs bg-purple-100 text-purple-800 px-2 py-1 rounded">
+      ${mediaKD ? `Média K/D: ${mediaKD}` : "Sem estatísticas"}
+    </div>
       </div>
       <div class="flex flex-col items-end gap-2">
         <button data-index="${index}" class="liberar-btn bg-red-600 text-white px-3 py-1 rounded hover:bg-red-700">Liberar</button>
