@@ -1,6 +1,6 @@
 // main.js
 
-const ORCAMENTO_INICIAL = 900000; // Orçamento inicial: 900k
+const ORCAMENTO_INICIAL = 1200000; // Orçamento inicial: 1200k
 
 // Inicializa o orçamento no localStorage se não existir
 function inicializarOrcamento() {
@@ -71,12 +71,12 @@ function calcularRating(jogador) {
   const pesos = PESOS_ATRIBUTOS[jogador.funcao] || PESOS_ATRIBUTOS.Duelista;
 
   return Math.round(
-    jogador.mira * pesos.mira +
+    (jogador.mira * pesos.mira +
       jogador.clutch * pesos.clutch +
       jogador.suporte * pesos.suporte +
       jogador.hs * pesos.hs +
       jogador.movimentacao * pesos.movimentacao +
-      jogador.agressividade * pesos.agressividade
+      jogador.agressividade * pesos.agressividade)
   );
 }
 
@@ -95,16 +95,22 @@ function renderElenco() {
 
   list.innerHTML = "";
 
+  if (jogadores.length === 0) {
+    list.innerHTML = "<p>Nenhum jogador contratado ainda.</p>";
+    return;
+  }
+
   jogadores.forEach((jogador, index) => {
     const div = document.createElement("div");
     div.className =
       "bg-white border rounded p-4 flex justify-between items-center";
     div.innerHTML = `
-      <div>
+      <div class="flex items-center gap-2">
+        <img class="mb-11.5 h-12 dark:hidden" src="assets/img/${jogador.nome}.png" alt="">
         <strong>${jogador.nome}</strong> 
-        <span class="text-blue-600 font-medium">${jogador.rating}</span>
-        (${jogador.funcao}) - ${jogador.idade || "?"} anos
-        <div class="text-sm mt-1">${jogador.stats || "Sem estatísticas"}</div>
+        <span title="Rating" class="text-blue-600 font-medium tooltip">${jogador.rating}</span>
+        <div title="Função" class="tooltip">(${jogador.funcao})</div>- <div title="Idade" class="tooltip">${jogador.idade || "?"} anos </div> 
+        <div class="text-xs bg-purple-100 text-purple-800 px-2 py-1 rounded"">${jogador.stats || "Sem estatísticas"}</div>
       </div>
       <div class="flex flex-col items-end gap-2">
         <button data-index="${index}" class="liberar-btn bg-red-600 text-white px-3 py-1 rounded hover:bg-red-700">Liberar</button>
@@ -130,15 +136,32 @@ function renderElenco() {
   });
 }
 
-// Adiciona jogador ao elenco no localStorage
+// Adiciona jogador ao elenco no localStorage (agora retorna true/false)
 function contratarJogador(jogador) {
   let elenco = JSON.parse(localStorage.getItem("elenco")) || [];
 
-  jogador.rating = calcularRating(jogador);
-  jogador.preco = Math.round(jogador.rating ** 2 * 100 + 50000); // Preço base + 50k
+  // Limite de 7 jogadores
+  if (elenco.length >= 7) {
+    // Não contratar e retornar false
+    alert(
+      "Você já tem 7 jogadores no seu time. Não é possível contratar mais."
+    );
+    return false;
+  }
 
+  // Calcula rating e preço (padroniza aqui)
+  jogador.rating = calcularRating(jogador);
+  jogador.preco =
+    jogador.preco || Math.round(jogador.rating ** 2 * 100 + 50000);
+
+  // Adiciona ao elenco e salva
   elenco.push(jogador);
   localStorage.setItem("elenco", JSON.stringify(elenco));
+
+  // Atualiza UI do elenco imediatamente
+  renderElenco();
+
+  return true;
 }
 
 // Remove jogador do elenco, adiciona ao mercado e reembolsa orçamento
@@ -180,26 +203,32 @@ function renderMercado() {
   mercado.innerHTML = "";
   jogadoresMercado.forEach((jogador, i) => {
     const div = document.createElement("div");
-    div.className = "mercado-jogador bg-white border p-4 flex justify-between items-center";
+    div.className =
+      "mercado-jogador bg-white border p-4 flex justify-between items-center";
 
     div.dataset.index = i; // Adiciona o índice como data attribute ao div pai
 
     div.innerHTML = `
       <div class="w-3/4">
         <div class="flex items-center gap-2">
+          <img class="mb-11.5 h-12 dark:hidden" src="assets/img/${jogador.nome}.png" alt="">
           <strong>${jogador.nome}</strong> 
           <span class="text-xs bg-purple-100 text-purple-800 px-2 py-1 rounded">${
             jogador.funcao
           }</span>
           <span class="text-blue-600 font-medium">${jogador.rating}</span>
         </div>
-        <div class="grid grid-cols-3 gap-1 mt-2 text-xs">
-          <div>🔫 ${jogador.mira}</div>
-          <div>💪 ${jogador.clutch}</div>
-          <div>🛡️ ${jogador.suporte}</div>
-          <div>🎯 ${jogador.hs}</div>
-          <div>🏃 ${jogador.movimentacao}</div>
-          <div>🔥 ${jogador.agressividade}</div>
+        <div class="grid grid-cols-3 gap-3 mt-2 text-xs">
+          <div title="Mira" class="tooltip">🔫 ${jogador.mira}</div>
+          <div title="Clutch" class="tooltip">💪 ${jogador.clutch}</div>
+          <div title="Suporte" class="tooltip">🛡️ ${jogador.suporte}</div>
+          <div title="Headshot" class="tooltip">🎯 ${jogador.hs}</div>
+          <div title="Movimentação" class="tooltip">🏃 ${
+            jogador.movimentacao
+          }</div>
+          <div title="Agressividade" class="tooltip">🔥 ${
+            jogador.agressividade
+          }</div>
         </div>
       </div>
       <button class="contratar-btn bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded transition">
@@ -224,8 +253,14 @@ function handleContratarClick(e) {
     return;
   }
 
-  const index = parseInt(jogadorDiv.dataset.index);
+  const index = parseInt(jogadorDiv.dataset.index, 10);
   const jogador = jogadoresMercado[index];
+  if (!jogador) {
+    console.error(
+      "Jogador não encontrado no array jogadoresMercado (index inválido)."
+    );
+    return;
+  }
 
   const orcamentoAtual = getOrcamento();
   const precoJogador = Number(jogador.preco);
@@ -235,9 +270,17 @@ function handleContratarClick(e) {
     return;
   }
 
-  contratarJogador(jogador);
+  // Primeiro tentamos contratar (verifica limite de 7 dentro da função)
+  const contratado = contratarJogador(jogador);
+  if (!contratado) {
+    // contratarJogador já mostrou alerta apropriado; não prosseguimos
+    return;
+  }
+
+  // Só agora atualizamos orçamento e removemos do mercado
   setOrcamento(orcamentoAtual - precoJogador);
 
+  // Remover do array de mercado e salvar
   jogadoresMercado.splice(index, 1);
   salvarMercado();
 
@@ -247,6 +290,7 @@ function handleContratarClick(e) {
     } por $${precoJogador.toLocaleString()}! Orçamento restante: $${getOrcamento().toLocaleString()}`
   );
 
+  // Atualiza UI do mercado e orçamento
   renderMercado();
   atualizarOrcamentoDisplay();
 }
@@ -311,7 +355,7 @@ let jogadoresMercado = JSON.parse(localStorage.getItem("mercado")) || [
     hs: 93,
     movimentacao: 94,
     agressividade: 95,
-    preco: 150000
+    preco: 150000,
   },
   {
     nome: "Less",
@@ -323,7 +367,7 @@ let jogadoresMercado = JSON.parse(localStorage.getItem("mercado")) || [
     hs: 89,
     movimentacao: 88,
     agressividade: 80,
-    preco: 130000
+    preco: 130000,
   },
   {
     nome: "cauanzin",
@@ -335,7 +379,7 @@ let jogadoresMercado = JSON.parse(localStorage.getItem("mercado")) || [
     hs: 85,
     movimentacao: 93,
     agressividade: 86,
-    preco: 125000
+    preco: 125000,
   },
 
   // FURIA (BR)
@@ -349,7 +393,7 @@ let jogadoresMercado = JSON.parse(localStorage.getItem("mercado")) || [
     hs: 83,
     movimentacao: 91,
     agressividade: 89,
-    preco: 110000
+    preco: 110000,
   },
   {
     nome: "Khalil",
@@ -361,7 +405,7 @@ let jogadoresMercado = JSON.parse(localStorage.getItem("mercado")) || [
     hs: 78,
     movimentacao: 82,
     agressividade: 75,
-    preco: 115000
+    preco: 115000,
   },
 
   // EDG (China)
@@ -375,7 +419,7 @@ let jogadoresMercado = JSON.parse(localStorage.getItem("mercado")) || [
     hs: 94,
     movimentacao: 95,
     agressividade: 97,
-    preco: 180000
+    preco: 180000,
   },
 
   // DRX (Coréia)
@@ -389,7 +433,7 @@ let jogadoresMercado = JSON.parse(localStorage.getItem("mercado")) || [
     hs: 82,
     movimentacao: 85,
     agressividade: 70,
-    preco: 140000
+    preco: 140000,
   },
 
   // G2 (Europa)
@@ -403,9 +447,9 @@ let jogadoresMercado = JSON.parse(localStorage.getItem("mercado")) || [
     hs: 90,
     movimentacao: 96,
     agressividade: 94,
-    preco: 160000
+    preco: 160000,
   },
-  
+
   // Time fictício - Novos talentos
   {
     nome: "sh1n",
@@ -417,7 +461,7 @@ let jogadoresMercado = JSON.parse(localStorage.getItem("mercado")) || [
     hs: 84,
     movimentacao: 83,
     agressividade: 70,
-    preco: 90000
+    preco: 90000,
   },
   {
     nome: "yurri",
@@ -429,12 +473,12 @@ let jogadoresMercado = JSON.parse(localStorage.getItem("mercado")) || [
     hs: 80,
     movimentacao: 89,
     agressividade: 84,
-    preco: 95000
-  }
+    preco: 95000,
+  },
 ];
 
 // Garante que todos os jogadores tenham rating calculado
-jogadoresMercado.forEach(jogador => {
+jogadoresMercado.forEach((jogador) => {
   if (typeof jogador.rating === "undefined") {
     jogador.rating = calcularRating(jogador);
   }
