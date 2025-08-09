@@ -71,12 +71,12 @@ function calcularRating(jogador) {
   const pesos = PESOS_ATRIBUTOS[jogador.funcao] || PESOS_ATRIBUTOS.Duelista;
 
   return Math.round(
-    (jogador.mira * pesos.mira +
+    jogador.mira * pesos.mira +
       jogador.clutch * pesos.clutch +
       jogador.suporte * pesos.suporte +
       jogador.hs * pesos.hs +
       jogador.movimentacao * pesos.movimentacao +
-      jogador.agressividade * pesos.agressividade)
+      jogador.agressividade * pesos.agressividade
   );
 }
 
@@ -105,17 +105,29 @@ function renderElenco() {
     div.className =
       "bg-white border rounded p-4 flex justify-between items-center";
     div.innerHTML = `
-      <div class="flex items-center gap-2">
-        <img class="mb-11.5 h-12 dark:hidden" src="assets/img/${jogador.nome}.png" alt="">
-        <strong>${jogador.nome}</strong> 
-        <span title="Rating" class="text-blue-600 font-medium tooltip">${jogador.rating}</span>
-        <div title="Função" class="tooltip">(${jogador.funcao})</div>- <div title="Idade" class="tooltip">${jogador.idade || "?"} anos </div> 
-        <div class="text-xs bg-purple-100 text-purple-800 px-2 py-1 rounded"">${jogador.stats || "Sem estatísticas"}</div>
-      </div>
-      <div class="flex flex-col items-end gap-2">
-        <button data-index="${index}" class="liberar-btn bg-red-600 text-white px-3 py-1 rounded hover:bg-red-700">Liberar</button>
-      </div>
-    `;
+  <div class="flex items-center gap-2">
+    <div class="bg-gray-700 rounded-lg p-1">
+      <img class="mb-11.5 h-12 dark:hidden" src="assets/img/${
+        jogador.nome
+      }.png" alt="">
+    </div>
+    <strong>${jogador.nome}</strong> 
+    <span title="Rating" class="text-blue-600 font-medium tooltip">${
+      jogador.rating
+    }</span>
+    <div title="Função" class="tooltip">(${
+      jogador.funcao
+    })</div>- <div title="Idade" class="tooltip">${
+      jogador.idade || "?"
+    } anos </div> 
+    <div class="text-xs bg-purple-100 text-purple-800 px-2 py-1 rounded"">${
+      jogador.stats || "Sem estatísticas"
+    }</div>
+  </div>
+  <div class="flex flex-col items-end gap-2">
+    <button data-index="${index}" class="liberar-btn bg-red-600 text-white px-3 py-1 rounded hover:bg-red-700">Liberar</button>
+  </div>
+`;
     list.appendChild(div);
   });
 
@@ -211,7 +223,11 @@ function renderMercado() {
     div.innerHTML = `
       <div class="w-3/4">
         <div class="flex items-center gap-2">
-          <img class="mb-11.5 h-12 dark:hidden" src="assets/img/${jogador.nome}.png" alt="">
+        <div class="bg-gray-700 rounded-md p-1">
+          <img class="mb-11.5 h-12 dark:hidden" src="assets/img/${
+            jogador.nome
+          }.png" alt="">
+        </div>  
           <strong>${jogador.nome}</strong> 
           <span class="text-xs bg-purple-100 text-purple-800 px-2 py-1 rounded">${
             jogador.funcao
