@@ -1,71 +1,145 @@
 const CALENDARIO_KEY = "calendario";
+const TEMPORADA_KEY = "temporada";
+const CLASSIFICACAO_KEY = "classificacao";
 
-const TORNEIOS_VALORANT = [
-  {
-    nome: "VCT Americas",
-    tipo: "Liga",
-    fases: ["Grupos", "Playoffs", "Final"],
-    times: [
-      "Seu Time", "LOUD", "FURIA", "Leviatán", "KRÜ", "NRG", "Sentinels", "G2", "Cloud9", "MIBR"
-    ]
-  },
-  {
-    nome: "VCT Masters",
-    tipo: "Internacional",
-    fases: ["Grupos", "Eliminatórias", "Final"],
-    times: [
-      "Seu Time", "Fnatic", "DRX", "EDG", "Paper Rex", "Team Liquid", "Leviatán", "LOUD"
-    ]
-  },
-  {
-    nome: "VCT Champions",
-    tipo: "Mundial",
-    fases: ["Grupos", "Quartas", "Semi", "Final"],
-    times: [
-      "Seu Time", "LOUD", "Fnatic", "DRX", "EDG", "Paper Rex", "Leviatán", "Sentinels"
-    ]
+// Sistema de temporada melhorado
+const TEMPORADA_CONFIG = {
+  nome: "VCT Americas 2025",
+  tipo: "Liga",
+  rodadas: 18, // Cada time joga contra todos os outros 2 vezes
+  times: [
+    { nome: "Seu Time", rating: 75, regiao: "BR" },
+    { nome: "LOUD", rating: 88, regiao: "BR" },
+    { nome: "FURIA", rating: 82, regiao: "BR" },
+    { nome: "MIBR", rating: 78, regiao: "BR" },
+    { nome: "Leviatán", rating: 85, regiao: "LATAM" },
+    { nome: "KRÜ", rating: 80, regiao: "LATAM" },
+    { nome: "NRG", rating: 86, regiao: "NA" },
+    { nome: "Sentinels", rating: 84, regiao: "NA" },
+    { nome: "G2", rating: 83, regiao: "NA" },
+    { nome: "Cloud9", rating: 81, regiao: "NA" }
+  ],
+  playoffs: {
+    classificados: 6, // Top 6 vão para playoffs
+    formato: "Eliminação Dupla"
   }
-];
+};
+
+// Sistema de pontuação
+const PONTUACAO = {
+  vitoria: 3,
+  derrota: 0,
+  bonusRounds: 0.1 // Bonus por diferença de rounds
+};
+
+// Inicializa temporada
+function inicializarTemporada() {
+  const temporada = JSON.parse(localStorage.getItem(TEMPORADA_KEY));
+  if (!temporada) {
+    const novaTemporada = {
+      ...TEMPORADA_CONFIG,
+      rodadaAtual: 1,
+      fase: "Liga Regular",
+      iniciada: false
+    };
+    localStorage.setItem(TEMPORADA_KEY, JSON.stringify(novaTemporada));
+    gerarCalendarioCompleto();
+    inicializarClassificacao();
+  }
+}
+
+// Gera calendário completo da temporada
+function gerarCalendarioCompleto() {
+  const times = TEMPORADA_CONFIG.times.filter(t => t.nome !== "Seu Time");
+  let calendario = [];
+  let rodada = 1;
+  
+  // Gera confrontos (cada time joga contra todos os outros 2 vezes)
+  times.forEach(adversario => {
+    // Primeiro turno
+    calendario.push({
+      rodada: rodada++,
+      fase: "Liga Regular",
+      turno: "1º Turno",
+      adversario: adversario.nome,
+      adversarioRating: adversario.rating,
+      data: gerarDataPartida(rodada),
+      resultado: null,
+      simulado: false
+    });
+  });
+  
+  times.forEach(adversario => {
+    // Segundo turno
+    calendario.push({
+      rodada: rodada++,
+      fase: "Liga Regular",
+      turno: "2º Turno", 
+      adversario: adversario.nome,
+      adversarioRating: adversario.rating,
+      data: gerarDataPartida(rodada),
+      resultado: null,
+      simulado: false
+    });
+  });
+  
+  localStorage.setItem(CALENDARIO_KEY, JSON.stringify(calendario));
+  return calendario;
+}
+
+// Gera data da partida baseada na rodada
+function gerarDataPartida(rodada) {
+  const dataBase = new Date(2025, 0, 15); // 15 de janeiro de 2025
+  const diasPorRodada = 4; // Uma partida a cada 4 dias
+  const dataPartida = new Date(dataBase.getTime() + (rodada - 1) * diasPorRodada * 24 * 60 * 60 * 1000);
+  return dataPartida.toLocaleDateString('pt-BR');
+}
+
+// Inicializa classificação
+function inicializarClassificacao() {
+  const classificacao = {};
+  TEMPORADA_CONFIG.times.forEach(time => {
+    classificacao[time.nome] = {
+      nome: time.nome,
+      rating: time.nome === "Seu Time" ? calcularRatingTime() : time.rating,
+      regiao: time.regiao,
+      pontos: 0,
+      vitorias: 0,
+      derrotas: 0,
+      roundsVencidos: 0,
+      roundsPerdidos: 0,
+      saldoRounds: 0,
+      partidas: 0,
+      aproveitamento: 0
+    };
+  });
+  localStorage.setItem(CLASSIFICACAO_KEY, JSON.stringify(classificacao));
+}
 
 function getCalendario() {
-  return (
-    JSON.parse(localStorage.getItem(CALENDARIO_KEY)) ||
-    gerarCalendarioTemporadaValorant()
-  );
+  inicializarTemporada();
+  return JSON.parse(localStorage.getItem(CALENDARIO_KEY)) || [];
+}
+
+function getClassificacao() {
+  return JSON.parse(localStorage.getItem(CLASSIFICACAO_KEY)) || {};
 }
 
 function salvarResultadoPartida(rodada, resultado) {
   const calendario = getCalendario();
-  const partida = calendario.find((p) => p.rodada === rodada);
-  if (partida) partida.resultado = resultado;
+  const partida = calendario.find(p => p.rodada === rodada);
+  if (!partida) return;
+  
+  partida.resultado = resultado;
+  partida.simulado = true;
+  
+  // Atualiza classificação
+  atualizarClassificacao(partida, resultado);
+  
+  // Simula outras partidas da rodada
+  simularOutrasPartidas();
+  
   localStorage.setItem(CALENDARIO_KEY, JSON.stringify(calendario));
-}
-
-// Estrutura dos torneios para o calendário
-function gerarCalendarioTemporadaValorant() {
-  let calendario = [];
-  let rodada = 1;
-  TORNEIOS_VALORANT.forEach(torneio => {
-    torneio.fases.forEach(fase => {
-      torneio.times.forEach(adversario => {
-        if (adversario !== "Seu Time") {
-          calendario.push({
-            rodada: rodada++,
-            torneio: torneio.nome,
-            fase: fase,
-            adversario: adversario,
-            data: `2025-${String(rodada).padStart(2, "0")}-01`,
-            resultado: null
-          });
-        }
-      });
-    });
-  });
-  localStorage.setItem("calendario", JSON.stringify(calendario));
-  return calendario;
-  renderCalendario();
-  renderClassificacao();
-  renderTabelaGrupos();
 }
 
 function renderCalendario() {
