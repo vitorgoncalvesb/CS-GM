@@ -27,6 +27,8 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   renderHistoricoSimulacoes();
+  renderCalendario();
+  renderClassificacao();
 });
 
 // Configuração do formulário para salvar configurações (alerta)

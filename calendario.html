@@ -31,32 +31,11 @@
     <main class="p-6 max-w-6xl mx-auto">
       <h2 class="text-xl font-bold mb-4">Calendário da Temporada</h2>
 
-      <div class="bg-white p-4 rounded border border-gray-200">
-        <table class="w-full text-sm">
-          <thead>
-            <tr class="border-b text-left">
-              <th class="py-2">Data</th>
-              <th class="py-2">Adversário</th>
-              <th class="py-2">Local</th>
-              <th class="py-2">Status</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr class="hover:bg-gray-50 border-b">
-              <td class="py-2">10/08/2025</td>
-              <td class="py-2">LOUD</td>
-              <td class="py-2">Casa</td>
-              <td class="py-2 text-yellow-600 font-semibold">Agendado</td>
-            </tr>
-            <tr class="hover:bg-gray-50">
-              <td class="py-2">17/08/2025</td>
-              <td class="py-2">Sentinels</td>
-              <td class="py-2">Fora</td>
-              <td class="py-2 text-yellow-600 font-semibold">Agendado</td>
-            </tr>
-          </tbody>
-        </table>
-      </div>
+      <ul id="lista-calendario" class="space-y-2 mt-4"></ul>
+
+      <div id="classificacao" class="mb-4 font-bold"></div>
+
+      <div id="tabela-grupos" class="mb-6"></div>
     </main>
 
     <footer class="text-center text-xs text-gray-500 mt-8 mb-4">
@@ -67,6 +46,7 @@
     <script src="assets/js/elenco.js"></script>
     <script src="assets/js/mercado.js"></script>
     <script src="assets/js/simulacao.js"></script>
+    <script src="assets/js/calendario.js"></script>
     <script src="assets/js/historico.js"></script>
     <script src="assets/js/main.js"></script>
   </body>

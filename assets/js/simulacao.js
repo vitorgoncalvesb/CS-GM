@@ -38,13 +38,25 @@ function simularPartida() {
     Math.random() < roundWinChance ? roundsTime++ : roundsAdversario++;
   }
 
-  // Overtime se empate em 12-12
   if (roundsTime === 12 && roundsAdversario === 12) {
-    let otWins = 0;
-    while (Math.abs(otWins) < 2) {
-      Math.random() < roundWinChance ? otWins++ : otWins--;
+    let timeOT = 0;
+    let advOT = 0;
+    let venceu = false;
+    while (!venceu) {
+      // Cada time joga um round como atacante e um como defensor
+      for (let i = 0; i < 2; i++) {
+        Math.random() < roundWinChance ? timeOT++ : advOT++;
+      }
+      // Verifica se alguém venceu os 2 rounds seguidos
+      if (timeOT - advOT === 2) {
+        roundsTime += 2;
+        venceu = true;
+      } else if (advOT - timeOT === 2) {
+        roundsAdversario += 2;
+        venceu = true;
+      }
+      // Se continuar empatado, repete
     }
-    otWins > 0 ? (roundsTime += 1) : (roundsAdversario += 1);
   }
 
   // Gera estatísticas sincronizadas
