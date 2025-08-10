@@ -1,72 +1,84 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Valorant GM - Estatísticas</title>
-  <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
-</head>
-<body class="bg-gray-100 text-gray-800">
-  <header class="bg-white border-b border-gray-300 p-4 flex justify-between items-center">
-    <h1 class="text-2xl font-bold">Valorant GM</h1>
-    <nav class="space-x-4 text-sm">
-      <a href="index.html" class="hover:underline">Dashboard</a>
-      <a href="elenco.html" class="hover:underline">Elenco</a>
-      <a href="mercado.html" class="hover:underline">Mercado</a>
-      <a href="simulacao.html" class="hover:underline">Simulação</a>
-      <a href="calendario.html" class="hover:underline">Calendário</a>
-      <a href="estatisticas.html" class="text-blue-600 font-semibold">Estatísticas</a>
-      <a href="financas.html" class="hover:underline">Finanças</a>
-      <a href="configuracoes.html" class="hover:underline">Configurações</a>
-    </nav>
-  </header>
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Valorant GM - Estatísticas</title>
+    <link
+      href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css"
+      rel="stylesheet"
+    />
+  </head>
+  <body class="bg-gray-100 text-gray-800">
+    <header
+      class="bg-white border-b border-gray-300 p-4 flex justify-between items-center"
+    >
+      <h1 class="text-2xl font-bold">Valorant GM</h1>
+      <nav class="space-x-4 text-sm">
+        <a href="index.html" class="hover:underline">Dashboard</a>
+        <a href="elenco.html" class="hover:underline">Elenco</a>
+        <a href="mercado.html" class="hover:underline">Mercado</a>
+        <a href="simulacao.html" class="hover:underline">Simulação</a>
+        <a href="calendario.html" class="hover:underline">Calendário</a>
+        <a href="estatisticas.html" class="text-blue-600 font-semibold"
+          >Estatísticas</a
+        >
+        <a href="financas.html" class="hover:underline">Finanças</a>
+        <a href="configuracoes.html" class="hover:underline">Configurações</a>
+      </nav>
+    </header>
 
-  <main class="p-6 max-w-6xl mx-auto">
-    <h2 class="text-xl font-bold mb-4">Estatísticas da Temporada</h2>
+    <main class="p-6 max-w-6xl mx-auto">
+      <h2 class="text-xl font-bold mb-4">Estatísticas da Temporada</h2>
 
-    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-      <div class="bg-white p-4 rounded border border-gray-200">
-        <h3 class="font-semibold mb-2">Estatísticas do Time</h3>
-        <ul class="text-sm space-y-1">
-          <li>Vitórias: <strong>8</strong></li>
-          <li>Derrotas: <strong>3</strong></li>
-          <li>Rodadas Vencidas: <strong>104</strong></li>
-          <li>Rodadas Perdidas: <strong>87</strong></li>
-          <li>Winrate: <strong>72.7%</strong></li>
-        </ul>
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div class="bg-white p-4 rounded border border-gray-200">
+          <h3 class="font-semibold mb-2">Estatísticas do Time</h3>
+          <ul class="text-sm space-y-1">
+            <li>Vitórias: <strong>8</strong></li>
+            <li>Derrotas: <strong>3</strong></li>
+            <li>Rodadas Vencidas: <strong>104</strong></li>
+            <li>Rodadas Perdidas: <strong>87</strong></li>
+            <li>Winrate: <strong>72.7%</strong></li>
+          </ul>
+        </div>
+
+        <div class="bg-white p-4 rounded border border-gray-200">
+          <h3 class="font-semibold mb-2">Melhores Jogadores</h3>
+          <table class="w-full text-sm">
+            <thead>
+              <tr class="text-left border-b">
+                <th class="py-1">Nome</th>
+                <th class="py-1">Rating</th>
+                <th class="py-1">K/D</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr class="border-b hover:bg-gray-50">
+                <td class="py-1">aspas</td>
+                <td class="py-1">1.24</td>
+                <td class="py-1">1.40</td>
+              </tr>
+              <tr class="hover:bg-gray-50">
+                <td class="py-1">Sacy</td>
+                <td class="py-1">1.12</td>
+                <td class="py-1">1.18</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
       </div>
+    </main>
 
-      <div class="bg-white p-4 rounded border border-gray-200">
-        <h3 class="font-semibold mb-2">Melhores Jogadores</h3>
-        <table class="w-full text-sm">
-          <thead>
-            <tr class="text-left border-b">
-              <th class="py-1">Nome</th>
-              <th class="py-1">Rating</th>
-              <th class="py-1">K/D</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr class="border-b hover:bg-gray-50">
-              <td class="py-1">aspas</td>
-              <td class="py-1">1.24</td>
-              <td class="py-1">1.40</td>
-            </tr>
-            <tr class="hover:bg-gray-50">
-              <td class="py-1">Sacy</td>
-              <td class="py-1">1.12</td>
-              <td class="py-1">1.18</td>
-            </tr>
-          </tbody>
-        </table>
-      </div>
-    </div>
-  </main>
-
-  <footer class="text-center text-xs text-gray-500 mt-8 mb-4">
-    Valorant GM &copy; 2025
-  </footer>
-  <script src="assets/js/jogadores.js"></script>
-  <script src="assets/js/main.js"></script>
-</body>
+    <footer class="text-center text-xs text-gray-500 mt-8 mb-4">
+      Valorant GM &copy; 2025
+    </footer>
+    <script src="assets/js/utils.js"></script>
+    <script src="assets/js/financas.js"></script>
+    <script src="assets/js/elenco.js"></script>
+    <script src="assets/js/mercado.js"></script>
+    <script src="assets/js/simulacao.js"></script>
+    <script src="assets/js/historico.js"></script>
+    <script src="assets/js/main.js"></script>
+  </body>
 </html>

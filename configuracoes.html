@@ -1,66 +1,94 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Valorant GM - Configurações</title>
-  <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
-</head>
-<body class="bg-gray-100 text-gray-800">
-  <header class="bg-white border-b border-gray-300 p-4 flex justify-between items-center">
-    <h1 class="text-2xl font-bold">Valorant GM</h1>
-    <nav class="space-x-4 text-sm">
-      <a href="index.html" class="hover:underline">Dashboard</a>
-      <a href="elenco.html" class="hover:underline">Elenco</a>
-      <a href="mercado.html" class="hover:underline">Mercado</a>
-      <a href="simulacao.html" class="hover:underline">Simulação</a>
-      <a href="calendario.html" class="hover:underline">Calendário</a>
-      <a href="estatisticas.html" class="hover:underline">Estatísticas</a>
-      <a href="financas.html" class="hover:underline">Finanças</a>
-      <a href="configuracoes.html" class="text-blue-600 font-semibold">Configurações</a>
-    </nav>
-  </header>
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Valorant GM - Configurações</title>
+    <link
+      href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css"
+      rel="stylesheet"
+    />
+  </head>
+  <body class="bg-gray-100 text-gray-800">
+    <header
+      class="bg-white border-b border-gray-300 p-4 flex justify-between items-center"
+    >
+      <h1 class="text-2xl font-bold">Valorant GM</h1>
+      <nav class="space-x-4 text-sm">
+        <a href="index.html" class="hover:underline">Dashboard</a>
+        <a href="elenco.html" class="hover:underline">Elenco</a>
+        <a href="mercado.html" class="hover:underline">Mercado</a>
+        <a href="simulacao.html" class="hover:underline">Simulação</a>
+        <a href="calendario.html" class="hover:underline">Calendário</a>
+        <a href="estatisticas.html" class="hover:underline">Estatísticas</a>
+        <a href="financas.html" class="hover:underline">Finanças</a>
+        <a href="configuracoes.html" class="text-blue-600 font-semibold"
+          >Configurações</a
+        >
+      </nav>
+    </header>
 
-  <main class="p-6 max-w-3xl mx-auto">
-    <h2 class="text-xl font-bold mb-4">Configurações do Jogo</h2>
+    <main class="p-6 max-w-3xl mx-auto">
+      <h2 class="text-xl font-bold mb-4">Configurações do Jogo</h2>
 
-    <form class="bg-white p-4 rounded border border-gray-200 space-y-4">
-      <div>
-        <label class="block text-sm font-medium">Dificuldade</label>
-        <select class="mt-1 block w-full border-gray-300 rounded-md shadow-sm">
-          <option>Fácil</option>
-          <option>Médio</option>
-          <option>Difícil</option>
-        </select>
-      </div>
+      <form class="bg-white p-4 rounded border border-gray-200 space-y-4">
+        <div>
+          <label class="block text-sm font-medium">Dificuldade</label>
+          <select
+            class="mt-1 block w-full border-gray-300 rounded-md shadow-sm"
+          >
+            <option>Fácil</option>
+            <option>Médio</option>
+            <option>Difícil</option>
+          </select>
+        </div>
 
-      <div>
-        <label class="block text-sm font-medium">Modo de Jogo</label>
-        <select class="mt-1 block w-full border-gray-300 rounded-md shadow-sm">
-          <option>Simples</option>
-          <option>Completo</option>
-        </select>
-      </div>
+        <div>
+          <label class="block text-sm font-medium">Modo de Jogo</label>
+          <select
+            class="mt-1 block w-full border-gray-300 rounded-md shadow-sm"
+          >
+            <option>Simples</option>
+            <option>Completo</option>
+          </select>
+        </div>
 
-      <div>
-        <label class="block text-sm font-medium">Idioma</label>
-        <select class="mt-1 block w-full border-gray-300 rounded-md shadow-sm">
-          <option>Português</option>
-          <option>Inglês</option>
-          <option>Espanhol</option>
-        </select>
-      </div>
+        <div>
+          <label class="block text-sm font-medium">Idioma</label>
+          <select
+            class="mt-1 block w-full border-gray-300 rounded-md shadow-sm"
+          >
+            <option>Português</option>
+            <option>Inglês</option>
+            <option>Espanhol</option>
+          </select>
+        </div>
 
-      <button type="submit" class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700">Salvar Configurações</button>
+        <button
+          type="submit"
+          class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700"
+        >
+          Salvar Configurações
+        </button>
 
-      <button class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700" onclick="resetarDados()">Resetar Dados</button>
-    </form>
-  </main>
+        <button
+          class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700"
+          onclick="resetarDados()"
+        >
+          Resetar Dados
+        </button>
+      </form>
+    </main>
 
-  <footer class="text-center text-xs text-gray-500 mt-8 mb-4">
-    Valorant GM &copy; 2025
-  </footer>
-  <script src="assets/js/jogadores.js"></script>
-  <script src="assets/js/main.js"></script>
-</body>
+    <footer class="text-center text-xs text-gray-500 mt-8 mb-4">
+      Valorant GM &copy; 2025
+    </footer>
+    <script src="assets/js/utils.js"></script>
+    <script src="assets/js/financas.js"></script>
+    <script src="assets/js/elenco.js"></script>
+    <script src="assets/js/mercado.js"></script>
+    <script src="assets/js/simulacao.js"></script>
+    <script src="assets/js/historico.js"></script>
+    <script src="assets/js/main.js"></script>
+  </body>
 </html>
