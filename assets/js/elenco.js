@@ -57,8 +57,8 @@ function renderElenco() {
       "bg-white border rounded p-4 flex justify-between items-center";
     div.innerHTML = `
       <div class="flex items-center gap-2">
-        <div class="bg-gray-700 rounded-lg p-1">
-          <img class="mb-11.5 h-12 dark:hidden" src="assets/img/${
+        <div class="rounded-lg p-1">
+          <img class="mb-11.5 h-12 dark:hidden rounded-lg" src="assets/img/${
             jogador.nome
           }.webp" alt="">
         </div>

@@ -4,7 +4,11 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Counter Strike GM - Home</title>
-    <link rel="shortcut icon" href="assets/img/favicon/favicon.jpg" type="image/x-icon">
+    <link
+      rel="shortcut icon"
+      href="assets/img/favicon/favicon.jpg"
+      type="image/x-icon"
+    />
     <link
       href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css"
       rel="stylesheet"
@@ -29,6 +33,45 @@
     </header>
 
     <main class="p-6 max-w-6xl mx-auto">
+      <!-- INBOX / EMAIL -->
+      <section class="mb-8">
+        <div class="bg-white p-4 shadow-sm rounded border border-gray-200">
+          <h2 class="font-bold text-lg mb-2 flex items-center gap-2">
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              class="h-5 w-5 inline-block text-blue-500"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+            >
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"
+              />
+            </svg>
+            Caixa de Entrada
+          </h2>
+          <div class="flex flex-col md:flex-row gap-4 mt-4">
+            <!-- Lista de mensagens -->
+            <div
+              class="w-full md:w-1/3 border-r border-gray-200 pr-4 max-h-72 overflow-y-auto"
+              id="inbox-list"
+            >
+              <ul class="space-y-2 text-sm" id="inbox-messages">
+                <!-- Mensagens serão inseridas aqui via JS -->
+              </ul>
+            </div>
+            <!-- Conteúdo da mensagem -->
+            <div class="flex-1 pl-4" id="inbox-content">
+              <div class="text-gray-500 text-sm">
+                Selecione uma mensagem para ver o conteúdo.
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
       <!-- DASHBOARD -->
       <section class="mb-6">
         <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -39,16 +82,25 @@
             <p><strong>Próximo jogo:</strong> vs Sentinels (2 dias)</p>
           </div>
 
-          <div class="bg-white p-4 shadow-sm rounded border border-gray-200 ">
+          <div class="bg-white p-4 shadow-sm rounded border border-gray-200">
             <h2 class="font-bold text-lg mb-2">Ações</h2>
             <div class="flex flex-col space-y-2">
-              <a href="simulacao.html" class="bg-blue-600 text-white px-4 py-2 rounded text-center">
+              <a
+                href="simulacao.html"
+                class="bg-blue-600 text-white px-4 py-2 rounded text-center"
+              >
                 Simular Jogo
               </a>
-              <a href="elenco.html" class="bg-gray-600 text-white px-4 py-2 rounded text-center">
+              <a
+                href="elenco.html"
+                class="bg-gray-600 text-white px-4 py-2 rounded text-center"
+              >
                 Ver Elenco
               </a>
-              <a href="mercado.html" class="bg-green-600 text-white px-4 py-2 rounded text-center">
+              <a
+                href="mercado.html"
+                class="bg-green-600 text-white px-4 py-2 rounded text-center"
+              >
                 Ir ao Mercado
               </a>
             </div>
@@ -155,5 +207,130 @@
     <script src="assets/js/simulacao.js"></script>
     <script src="assets/js/historico.js"></script>
     <script src="assets/js/main.js"></script>
+    <script>
+      // Inbox real: integra propostas, respostas e notificações do sistema
+      function getInboxData() {
+        const inbox = [];
+        // Mensagem de boas-vindas da diretoria
+        inbox.push({
+          id: "welcome",
+          title: "Bem-vindo ao clube!",
+          content: `<b>Prezado(a) treinador(a),</b><br>
+A diretoria deseja muito sucesso à frente do <b>${
+            localStorage.getItem("timeSelecionado") || "seu time"
+          }</b>!<br>
+Conte conosco para alcançar grandes conquistas.<br><br><i>Atenciosamente, Diretoria</i>`,
+          date: new Date(Date.now() - 86400000).toLocaleDateString(),
+          type: "boasvindas",
+        });
+
+        // Propostas recebidas (IA querendo comprar jogador do usuário)
+        let propostasRecebidas = [];
+        try {
+          propostasRecebidas = JSON.parse(
+            localStorage.getItem("propostasRecebidas") || "[]"
+          );
+        } catch {}
+        propostasRecebidas.forEach((p, idx) => {
+          inbox.push({
+            id: "proposta_" + idx,
+            title: `Proposta Recebida: ${p.jogador}`,
+            content: `<b>O time <span class='text-blue-600'>${
+              p.de
+            }</span> enviou uma proposta pelo jogador <b>${
+              p.jogador
+            }</b>.</b><br>Valor: <b>$${Math.round(
+              p.valor
+            ).toLocaleString()}</b><br>Salário Oferecido: <b>$${Math.round(
+              p.salario
+            ).toLocaleString()}</b><br>Status: <b>${
+              p.status.charAt(0).toUpperCase() + p.status.slice(1)
+            }</b><br><br><i>Responda na tela de Mercado.</i>`,
+            date: new Date(p.data || Date.now()).toLocaleDateString(),
+            type: "proposta",
+          });
+        });
+
+        // Propostas enviadas pelo usuário (tentativas de contratação)
+        let propostasEnviadas = [];
+        try {
+          propostasEnviadas = JSON.parse(
+            localStorage.getItem("propostasEnviadas") || "[]"
+          );
+        } catch {}
+        propostasEnviadas.forEach((p, idx) => {
+          let statusMsg = "";
+          if (p.status === "aceita") {
+            statusMsg = `<b>O jogador <span class='text-blue-600'>${p.jogador}</span> aceitou sua proposta e foi contratado!</b><br>Bem-vindo ao time!`;
+          } else if (p.status === "recusada") {
+            statusMsg = `<b>O jogador <span class='text-blue-600'>${
+              p.jogador
+            }</span> recusou sua proposta.</b><br>Motivo: ${
+              p.motivo || "Desconhecido."
+            }<br><i>Tente novamente após alguns dias.</i>`;
+          } else {
+            statusMsg = `<b>Sua proposta para <span class='text-blue-600'>${p.jogador}</span> está pendente.</b><br>Aguarde resposta.`;
+          }
+          inbox.push({
+            id: "enviada_" + idx,
+            title: `Proposta ${
+              p.status
+                ? p.status.charAt(0).toUpperCase() + p.status.slice(1)
+                : "Enviada"
+            }: ${p.jogador}`,
+            content: statusMsg,
+            date: new Date(p.data || Date.now()).toLocaleDateString(),
+            type: "resposta",
+          });
+        });
+
+        // Notificações do sistema (exemplo: mercado aberto)
+        let notificacoes = [];
+        try {
+          notificacoes = JSON.parse(
+            localStorage.getItem("notificacoes") || "[]"
+          );
+        } catch {}
+        notificacoes.forEach((n, idx) => {
+          inbox.push({
+            id: "not_" + idx,
+            title: n.titulo || "Notificação",
+            content: n.mensagem || "",
+            date: n.data ? new Date(n.data).toLocaleDateString() : "",
+            type: "noticia",
+          });
+        });
+
+        // Ordena por data (mais recente primeiro)
+        inbox.sort((a, b) => new Date(b.date) - new Date(a.date));
+        return inbox;
+      }
+
+      function renderInbox() {
+        const list = document.getElementById("inbox-messages");
+        const content = document.getElementById("inbox-content");
+        if (!list || !content) return;
+        list.innerHTML = "";
+        const inboxData = getInboxData();
+        inboxData.forEach((msg, idx) => {
+          const li = document.createElement("li");
+          li.className =
+            "cursor-pointer px-2 py-2 rounded hover:bg-blue-50 flex justify-between items-center";
+          li.innerHTML = `<span>${msg.title}</span><span class='text-xs text-gray-400 ml-2'>${msg.date}</span>`;
+          li.onclick = () => {
+            // Destaca selecionado
+            list
+              .querySelectorAll("li")
+              .forEach((el) => el.classList.remove("bg-blue-100"));
+            li.classList.add("bg-blue-100");
+            content.innerHTML = `<div class='font-semibold mb-2'>${msg.title}</div><div class='mb-2 text-xs text-gray-400'>${msg.date}</div><div class='text-sm'>${msg.content}</div>`;
+          };
+          // Seleciona a primeira mensagem por padrão
+          if (idx === 0) setTimeout(() => li.onclick(), 10);
+          list.appendChild(li);
+        });
+      }
+      document.addEventListener("DOMContentLoaded", renderInbox);
+    </script>
   </body>
 </html>

@@ -264,7 +264,7 @@ function handlePropostaClick(e) {
   // Cria botão novo
   const btn = document.createElement('button');
   btn.id = 'btn-avancar-dia';
-  btn.textContent = 'Avançar Dia';
+  btn.textContent = 'Avançar Semana';
   btn.className = 'fixed bottom-20 right-4 bg-indigo-600 text-white px-4 py-2 rounded shadow-lg z-50';
   btn.onclick = function() {
     // Processa propostas pendentes do usuário (responde só UMA por dia, para simular tempo)
@@ -282,7 +282,8 @@ function handlePropostaClick(e) {
     if (typeof renderMercado === 'function') renderMercado();
     if (typeof renderPropostasPendentes === 'function') renderPropostasPendentes();
     if (typeof renderPropostasRecebidas === 'function') renderPropostasRecebidas();
-    alert('Um dia se passou no jogo! Mercado e propostas atualizados.' + (respondeu ? '' : '\nNenhuma proposta pendente para processar.'));
+    alert('Uma semana se passou no jogo! Mercado e propostas atualizados.' + (respondeu ? '' : '\nNenhuma proposta pendente para processar.'));
   };
   document.body.appendChild(btn);
+  renderInbox()
 })();
