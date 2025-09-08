@@ -72,12 +72,11 @@
     <main class="max-w-5xl mx-auto mt-10">
       <div class="flex items-center justify-between mb-6">
         <h1 class="text-2xl font-bold">Gerenciar Carreiras</h1>
-        <button
-          id="btn-nova-carreira"
-          class="bg-blue-600 text-white px-6 py-2 rounded font-semibold hover:bg-blue-700 transition"
-        >
-          Nova carreira
-        </button>
+        <div class="flex gap-2">
+          <button id="btn-nova-carreira" class="bg-blue-600 text-white px-6 py-2 rounded font-semibold hover:bg-blue-700 transition">Nova carreira</button>
+          <input type="file" id="input-importar-save" accept=".json" class="hidden" />
+          <button id="btn-importar-carreira" class="bg-gray-500 text-white px-6 py-2 rounded font-semibold hover:bg-gray-600 transition">Importar carreira</button>
+        </div>
       </div>
       <div class="overflow-x-auto">
         <table class="w-full bg-white rounded shadow border border-gray-200">
@@ -95,7 +94,9 @@
         </table>
       </div>
     </main>
-    <input type="file" id="input-importar-save" accept=".json" class="hidden" />
+    <footer class="text-center text-xs text-gray-500 mt-8 mb-4">
+      Counter Strike GM &copy; 2025
+    </footer>
     <script src="assets/js/main.js"></script>
     <script src="assets/js/save.js"></script>
   </body>
