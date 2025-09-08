@@ -6,7 +6,19 @@ function calcularRating(jogador) {
     return Math.max(0, Math.min(1, (val - 60) / 40)); // Assume atributos entre 60 e 100
   }
 
-  const pesos = PESOS_ATRIBUTOS[jogador.funcao] || PESOS_ATRIBUTOS.Duelista;
+  // Pesos padrão caso não exista a função
+  const PESOS_PADRAO = {
+    mira: 0,
+    clutch: 0,
+    suporte: 0,
+    hs: 0,
+    movimentacao: 0,
+    agressividade: 0,
+  };
+
+  const pesos = (typeof PESOS_ATRIBUTOS !== "undefined" && PESOS_ATRIBUTOS[jogador.funcao])
+    ? PESOS_ATRIBUTOS[jogador.funcao]
+    : PESOS_PADRAO;
 
   // Rating base pelos atributos principais
   let ratingBase =

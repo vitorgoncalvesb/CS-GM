@@ -26,7 +26,7 @@ function renderMercado() {
         <div class="bg-gray-700 rounded-md p-1">
           <img class="mb-11.5 h-12 dark:hidden" src="assets/img/${
             jogador.nome
-          }.png" alt="">
+          }.webp" alt="">
         </div>  
           <strong>${jogador.nome}</strong> 
           <span class="text-xs bg-purple-100 text-purple-800 px-2 py-1 rounded">${

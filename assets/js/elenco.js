@@ -60,7 +60,7 @@ function renderElenco() {
         <div class="bg-gray-700 rounded-lg p-1">
           <img class="mb-11.5 h-12 dark:hidden" src="assets/img/${
             jogador.nome
-          }.png" alt="">
+          }.webp" alt="">
         </div>
         <strong>${jogador.nome}</strong> 
         <span title="Rating" class="text-blue-600 font-medium tooltip">${
