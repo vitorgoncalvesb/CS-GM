@@ -50,10 +50,10 @@
           <option value="asc">Mais novo</option>
           <option value="desc">Mais velho</option>
         </select>
-        <select id="filtro-overall" class="border rounded px-2 py-1">
-          <option value="">Overall</option>
-          <option value="desc">Maior Overall</option>
-          <option value="asc">Menor Overall</option>
+        <select id="filtro-rating" class="border rounded px-2 py-1">
+          <option value="">Rating</option>
+          <option value="desc">Maior Rating</option>
+          <option value="asc">Menor Rating</option>
         </select>
       </div>
       <div class="table-scroll">
@@ -76,24 +76,20 @@
     <script src="assets/js/main.js"></script>
     <script>
     // --- Helpers ---
-    function calcularOverall(j) {
-      let soma = 0, n = 0;
-      [j.mira, j.clutch, j.hs, j.movimentacao, j.suporte, j.agressividade].forEach(v => { if(typeof v==="number") { soma+=v; n++; } });
-      return n ? Math.round(soma/n) : '-';
-    }
+  // Não é mais necessário calcular overall, usamos rating direto
     // --- Renderização ---
     let abaAtual = 'free';
-    let filtroIdade = '', filtroOverall = '';
+    let filtroIdade = '', filtroRating = '';
     const theadFree = `<tr>
-      <th>Ações</th><th>Foto</th><th>Nome</th><th>Demanda</th><th>Posição</th><th>Idade</th><th>Aim</th><th>Clutch</th><th>Hs</th><th>Mov.</th><th>Suporte</th><th>Agress.</th><th>Overall</th><th>Potencial</th>
+      <th>Ações</th><th>Foto</th><th>Nome</th><th>Demanda</th><th>Posição</th><th>Idade</th><th>Aim</th><th>Clutch</th><th>Hs</th><th>Mov.</th><th>Suporte</th><th>Agress.</th><th>Rating</th><th>Potencial</th>
     </tr>`;
     const theadAll = `<tr>
-      <th>Ações</th><th>Foto</th><th>Nome</th><th>Demanda</th><th>Posição</th><th>Idade</th><th>Time</th><th>Aim</th><th>Clutch</th><th>Hs</th><th>Mov.</th><th>Suporte</th><th>Agress.</th><th>Overall</th><th>Potencial</th>
+      <th>Ações</th><th>Foto</th><th>Nome</th><th>Demanda</th><th>Posição</th><th>Idade</th><th>Time</th><th>Aim</th><th>Clutch</th><th>Hs</th><th>Mov.</th><th>Suporte</th><th>Agress.</th><th>Rating</th><th>Potencial</th>
     </tr>`;
     function renderTabela() {
       // Pega jogadores do mercado (todos os jogadores ativos exceto do usuário)
       let mercado = (typeof jogadoresMercado !== 'undefined' && Array.isArray(jogadoresMercado)) ? jogadoresMercado : (JSON.parse(localStorage.getItem('mercado')||'[]'));
-      let jogadores = mercado.map(j => ({...j, overall: calcularOverall(j)}));
+      let jogadores = mercado.map(j => ({...j}));
       const meuTime = localStorage.getItem('timeSelecionado');
       if (abaAtual === 'all') {
         // Exibe todos os jogadores do mercado, exceto os do meu time
@@ -103,7 +99,7 @@
       }
       // Filtros
       if (filtroIdade) jogadores = jogadores.sort((a,b) => filtroIdade==='asc'?a.idade-b.idade:b.idade-a.idade);
-      if (filtroOverall) jogadores = jogadores.sort((a,b) => filtroOverall==='asc'?a.overall-b.overall:b.overall-a.overall);
+      if (filtroRating) jogadores = jogadores.sort((a,b) => filtroRating==='asc'?a.rating-b.rating:b.rating-a.rating);
       // Render
       document.getElementById('thead-mercado').innerHTML = abaAtual==='free'?theadFree:theadAll;
       document.getElementById('tbody-mercado').innerHTML = jogadores.map(j => {
@@ -129,7 +125,7 @@
           <td>${j.movimentacao||'-'}</td>
           <td>${j.suporte||'-'}</td>
           <td>${j.agressividade||'-'}</td>
-          <td>${j.overall||'-'}</td>
+          <td>${j.rating||'-'}</td>
           <td>${j.potencial||'-'}</td>
         </tr>
         `;
@@ -152,8 +148,8 @@
       filtroIdade = this.value;
       renderTabela();
     };
-    document.getElementById('filtro-overall').onchange = function(){
-      filtroOverall = this.value;
+    document.getElementById('filtro-rating').onchange = function(){
+      filtroRating = this.value;
       renderTabela();
     };
     // --- Oferecer Contrato ---

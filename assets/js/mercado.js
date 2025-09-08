@@ -386,13 +386,12 @@ if (!document.getElementById('btn-propostas-pendentes')) {
   // Remove botão antigo se existir
   const btnAntigo = document.getElementById('btn-avancar-dia');
   if (btnAntigo) btnAntigo.remove();
-  // Cria botão novo
-  const btn = document.createElement('button');
-  btn.id = 'btn-avancar-dia';
-  btn.textContent = 'Avançar Semana';
-  btn.className = 'fixed bottom-20 right-4 bg-indigo-600 text-white px-4 py-2 rounded shadow-lg z-50';
-  btn.onclick = function() {
-    // Processa propostas pendentes do usuário (responde só UMA por dia, para simular tempo)
+  // Cria botão de avançar semana
+  const btnSemana = document.createElement('button');
+  btnSemana.id = 'btn-avancar-dia';
+  btnSemana.textContent = 'Avançar Semana';
+  btnSemana.className = 'fixed bottom-20 right-4 bg-indigo-600 text-white px-4 py-2 rounded shadow-lg z-50';
+  btnSemana.onclick = function() {
     let respondeu = false;
     for (let i = 0; i < propostasPendentes.length; i++) {
       if (propostasPendentes[i].status === 'pendente') {
@@ -401,16 +400,36 @@ if (!document.getElementById('btn-propostas-pendentes')) {
         break;
       }
     }
-    // Evolução semanal dos jogadores
-    if (typeof window.evoluirJogadoresSemana === 'function') window.evoluirJogadoresSemana();
-    // IA faz movimentações (contratações e propostas para o usuário)
+    if (typeof avancarSemanaJogo === 'function') avancarSemanaJogo();
     simularTransferenciasIA();
-    // Atualiza mercado e propostas
     if (typeof renderMercado === 'function') renderMercado();
     if (typeof renderPropostasPendentes === 'function') renderPropostasPendentes();
     if (typeof renderPropostasRecebidas === 'function') renderPropostasRecebidas();
     alert('Uma semana se passou no jogo! Mercado, evolução e propostas atualizados.' + (respondeu ? '' : '\nNenhuma proposta pendente para processar.'));
   };
-  document.body.appendChild(btn);
+  document.body.appendChild(btnSemana);
+
+  // Cria botão de avançar mês
+  const btnMes = document.createElement('button');
+  btnMes.id = 'btn-avancar-mes';
+  btnMes.textContent = 'Avançar Mês';
+  btnMes.className = 'fixed bottom-32 right-4 bg-green-700 text-white px-4 py-2 rounded shadow-lg z-50';
+  btnMes.onclick = function() {
+    let respondeu = false;
+    for (let i = 0; i < propostasPendentes.length; i++) {
+      if (propostasPendentes[i].status === 'pendente') {
+        window.responderPropostaIA(i);
+        respondeu = true;
+        break;
+      }
+    }
+    if (typeof avancarMesJogo === 'function') avancarMesJogo();
+    simularTransferenciasIA();
+    if (typeof renderMercado === 'function') renderMercado();
+    if (typeof renderPropostasPendentes === 'function') renderPropostasPendentes();
+    if (typeof renderPropostasRecebidas === 'function') renderPropostasRecebidas();
+    alert('Um mês se passou no jogo! Mercado, evolução e propostas atualizados.' + (respondeu ? '' : '\nNenhuma proposta pendente para processar.'));
+  };
+  document.body.appendChild(btnMes);
   renderInbox()
 })();

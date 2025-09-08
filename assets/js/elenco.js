@@ -50,14 +50,15 @@ function renderElenco() {
   const bancoList = list.querySelector("#banco-list");
 
   // Remove todos os jogadores com contrato expirado antes de renderizar
-  let jogadoresAtivos = jogadores.filter(jogador => {
+  let jogadoresAtivos = jogadores.filter((jogador) => {
     const contrato = jogador.contrato;
     if (contrato && contrato.fimEm && contrato.fimEm <= Date.now()) {
-      adicionarNotificacaoInbox && adicionarNotificacaoInbox({
-        tipo: "contrato",
-        mensagem: `Contrato de ${jogador.nome} expirou e ele foi liberado do elenco.`,
-        data: new Date().toISOString(),
-      });
+      adicionarNotificacaoInbox &&
+        adicionarNotificacaoInbox({
+          tipo: "contrato",
+          mensagem: `Contrato de ${jogador.nome} expirou e ele foi liberado do elenco.`,
+          data: new Date().toISOString(),
+        });
       // Adiciona ao mercado
       let mercado = JSON.parse(localStorage.getItem("mercado")) || [];
       mercado.push(jogador);
@@ -83,20 +84,67 @@ function renderElenco() {
     } else if (contrato.fimEm && contrato.fimEm <= Date.now()) {
       semanasRestantes = 0;
     }
-    const salario = contrato.salario ? `R$ ${contrato.salario.toLocaleString()}` : "-";
-    const rescisao = contrato.rescisao ? `R$ ${contrato.rescisao.toLocaleString()}` : "-";
-    const status = contrato.fimEm && contrato.fimEm <= Date.now() ? '<span class="text-red-600">Expirado</span>' : '<span class="text-green-700">Ativo</span>';
+    const salario = contrato.salario
+      ? `R$ ${contrato.salario.toLocaleString()}`
+      : "-";
+    const rescisao = contrato.rescisao
+      ? `R$ ${contrato.rescisao.toLocaleString()}`
+      : "-";
+    const status =
+      contrato.fimEm && contrato.fimEm <= Date.now()
+        ? '<span class="text-red-600">Expirado</span>'
+        : '<span class="text-green-700">Ativo</span>';
     const div = document.createElement("div");
-    div.className = "bg-white border rounded p-4 flex justify-between items-center";
+    div.className =
+      "bg-white border rounded p-4 flex justify-between items-center";
+    // Busca diferença de rating anual (última virada de ano)
+    let diffHtml = "";
+    let diffPotHtml = "";
+    if (Array.isArray(jogador.evolucaoAnual) && jogador.evolucaoAnual.length) {
+      // Pega o último registro de evolução anual
+      const evo = jogador.evolucaoAnual[jogador.evolucaoAnual.length - 1];
+      // Rating diff
+      if (evo && typeof evo.diff === "number" && evo.diff !== 0) {
+        const cor = evo.diff > 0 ? "text-green-600" : "text-red-600";
+        const sinal = evo.diff > 0 ? "+" : "";
+        diffHtml = ` <span class="${cor} text-xs">(${sinal}${evo.diff})</span>`;
+      }
+      // Potencial diff
+      if (evo && typeof evo.diffPot === "number") {
+        const corPot =
+          evo.diffPot > 0
+            ? "text-green-600"
+            : evo.diffPot < 0
+            ? "text-red-600"
+            : "text-gray-400";
+        const sinalPot = evo.diffPot > 0 ? "+" : "";
+        diffPotHtml = ` <span class="${corPot} text-xs">(${sinalPot}${evo.diffPot})</span>`;
+      }
+    }
     div.innerHTML = `
       <div class="flex items-center gap-2">
         <div class="rounded-lg p-1">
-          <img class="mb-11.5 h-12 dark:hidden rounded-lg" src="assets/img/${jogador.nome}.webp" alt="">
+          <img class="mb-11.5 h-12 dark:hidden rounded-lg" src="assets/img/${
+            jogador.nome
+          }.webp" alt="">
         </div>
         <strong>${jogador.nome}</strong> 
-        <span title="Rating" class="text-blue-600 font-medium tooltip">${jogador.rating}</span>
-        <span title="Potencial" class="text-green-700 font-medium ml-1">(Pot: ${jogador.potencial || '?'})</span>
-        <div title="Função" class="tooltip">(${jogador.funcao})</div>- <div title="Idade" class="tooltip">${jogador.idade || "?"} anos </div>
+  <span title="Rating" class="text-blue-600 font-medium tooltip">${
+    jogador.rating
+  }${diffHtml}</span>
+  <span title="Potencial" class="text-green-700 font-medium ml-1">(Pot: ${
+    Array.isArray(jogador.evolucaoAnual) &&
+    jogador.evolucaoAnual.length &&
+    typeof jogador.evolucaoAnual[jogador.evolucaoAnual.length - 1].potencial !==
+      "undefined"
+      ? jogador.evolucaoAnual[jogador.evolucaoAnual.length - 1].potencial
+      : jogador.potencial || "?"
+  }${diffPotHtml})</span>
+        <div title="Função" class="tooltip">(${
+          jogador.funcao
+        })</div>- <div title="Idade" class="tooltip">${
+      jogador.idade || "?"
+    } anos </div>
         <div class="text-xs bg-purple-100 text-purple-800 px-2 py-1 rounded">
           ${mediaKD ? `Média K/D: ${mediaKD}` : "Sem estatísticas"}
         </div>
@@ -120,35 +168,38 @@ function renderElenco() {
         </button>
       </div>
     `;
-  // Botão de evolução: mostra histórico em modal
-  list.querySelectorAll(".evolucao-btn").forEach((btn) => {
-    btn.addEventListener("click", () => {
-      // Remove qualquer modal de evolução já aberta
-      document.querySelectorAll('.evo-modal').forEach(m => m.remove());
-      const idx = parseInt(btn.dataset.index);
-      let jogadores = JSON.parse(localStorage.getItem("elenco")) || [];
-      const jogador = jogadores[idx];
-      if (!jogador || !Array.isArray(jogador.evolucao)) return;
-      let html = `<h2>Evolução - ${jogador.nome}</h2><ul class='mt-2'>`;
-      jogador.evolucao.slice(-30).forEach((evo) => {
-        html += `<li class='mb-1'>
-          <b>${new Date(evo.data).toLocaleDateString()}</b>: Rating: <b>${evo.rating}</b> | Overall: <b>${evo.overall}</b>
+    // Botão de evolução: mostra histórico em modal
+    list.querySelectorAll(".evolucao-btn").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        // Remove qualquer modal de evolução já aberta
+        document.querySelectorAll(".evo-modal").forEach((m) => m.remove());
+        const idx = parseInt(btn.dataset.index);
+        let jogadores = JSON.parse(localStorage.getItem("elenco")) || [];
+        const jogador = jogadores[idx];
+        if (!jogador || !Array.isArray(jogador.evolucao)) return;
+        let html = `<h2>Evolução - ${jogador.nome}</h2><ul class='mt-2'>`;
+        jogador.evolucao.slice(-30).forEach((evo) => {
+          html += `<li class='mb-1'>
+          <b>${new Date(evo.data).toLocaleDateString()}</b>: Rating: <b>${
+            evo.rating
+          }</b>
         </li>`;
-      });
-      html += '</ul>';
-      // Modal simples
-      const modal = document.createElement('div');
-      modal.className = 'evo-modal';
-      modal.style = 'position:fixed;top:0;left:0;width:100vw;height:100vh;background:#0008;z-index:9999;display:flex;align-items:center;justify-content:center;';
-      modal.innerHTML = `<div class='bg-white p-6 rounded shadow max-w-md'>${html}<br><button id='fechar-evo-modal' class='mt-4 bg-blue-600 text-white px-4 py-2 rounded'>Fechar</button></div>`;
-      document.body.appendChild(modal);
-      modal.querySelector('#fechar-evo-modal').onclick = () => modal.remove();
-      // Fechar ao clicar fora do conteúdo da modal
-      modal.addEventListener('mousedown', (e) => {
-        if (e.target === modal) modal.remove();
+        });
+        html += "</ul>";
+        // Modal simples
+        const modal = document.createElement("div");
+        modal.className = "evo-modal";
+        modal.style =
+          "position:fixed;top:0;left:0;width:100vw;height:100vh;background:#0008;z-index:9999;display:flex;align-items:center;justify-content:center;";
+        modal.innerHTML = `<div class='bg-white p-6 rounded shadow max-w-md'>${html}<br><button id='fechar-evo-modal' class='mt-4 bg-blue-600 text-white px-4 py-2 rounded'>Fechar</button></div>`;
+        document.body.appendChild(modal);
+        modal.querySelector("#fechar-evo-modal").onclick = () => modal.remove();
+        // Fechar ao clicar fora do conteúdo da modal
+        modal.addEventListener("mousedown", (e) => {
+          if (e.target === modal) modal.remove();
+        });
       });
     });
-  });
     if (isTitular) {
       titularesList.appendChild(div);
     } else {
@@ -161,19 +212,21 @@ function renderElenco() {
     btn.addEventListener("click", (e) => {
       e.stopPropagation();
       // Fecha outros dropdowns
-      document.querySelectorAll('.dropdown-menu').forEach(menu => menu.classList.add('hidden'));
-      const menu = btn.parentElement.querySelector('.dropdown-menu');
-      if (menu) menu.classList.toggle('hidden');
+      document
+        .querySelectorAll(".dropdown-menu")
+        .forEach((menu) => menu.classList.add("hidden"));
+      const menu = btn.parentElement.querySelector(".dropdown-menu");
+      if (menu) menu.classList.toggle("hidden");
 
       // Fecha dropdown ao clicar fora dele
       function handleClickOutside(event) {
         if (!menu.contains(event.target) && event.target !== btn) {
-          menu.classList.add('hidden');
-          document.removeEventListener('mousedown', handleClickOutside);
+          menu.classList.add("hidden");
+          document.removeEventListener("mousedown", handleClickOutside);
         }
       }
       setTimeout(() => {
-        document.addEventListener('mousedown', handleClickOutside);
+        document.addEventListener("mousedown", handleClickOutside);
       }, 0);
     });
   });
@@ -187,7 +240,11 @@ function renderElenco() {
       let titulares = JSON.parse(localStorage.getItem("titulares")) || [];
       const jogador = jogadores[idx];
       if (!jogador) return;
-      if (!window.confirm(`Tem certeza que deseja liberar ${jogador.nome} do elenco?`)) {
+      if (
+        !window.confirm(
+          `Tem certeza que deseja liberar ${jogador.nome} do elenco?`
+        )
+      ) {
         return;
       }
       titulares = titulares.filter((n) => n !== jogador.nome);
@@ -205,12 +262,19 @@ function renderElenco() {
       if (!jogador || !jogador.contrato) return;
 
       // Modal simples para renovação
-      const novaDuracao = parseInt(prompt("Nova duração do contrato (semanas):", jogador.contrato.duracao || 12));
+      const novaDuracao = parseInt(
+        prompt(
+          "Nova duração do contrato (semanas):",
+          jogador.contrato.duracao || 12
+        )
+      );
       if (!novaDuracao || novaDuracao < 4) {
         alert("Duração mínima: 4 semanas.");
         return;
       }
-      const novoSalario = parseInt(prompt("Novo salário semanal:", jogador.contrato.salario || 1000));
+      const novoSalario = parseInt(
+        prompt("Novo salário semanal:", jogador.contrato.salario || 1000)
+      );
       if (!novoSalario || novoSalario < 1000) {
         alert("Salário mínimo: 1000.");
         return;
@@ -232,11 +296,12 @@ function renderElenco() {
         tipo: "renovação",
       });
       localStorage.setItem("elenco", JSON.stringify(jogadores));
-      adicionarNotificacaoInbox && adicionarNotificacaoInbox({
-        tipo: "contrato",
-        mensagem: `Contrato de ${jogador.nome} foi renovado por ${novaDuracao} semanas.`,
-        data: new Date().toISOString(),
-      });
+      adicionarNotificacaoInbox &&
+        adicionarNotificacaoInbox({
+          tipo: "contrato",
+          mensagem: `Contrato de ${jogador.nome} foi renovado por ${novaDuracao} semanas.`,
+          data: new Date().toISOString(),
+        });
       renderElenco();
     });
   });
@@ -248,8 +313,18 @@ function renderElenco() {
       let jogadores = JSON.parse(localStorage.getItem("elenco")) || [];
       const jogador = jogadores[idx];
       if (!jogador) return;
-      const multa = jogador.contrato && jogador.contrato.rescisao ? jogador.contrato.rescisao : 0;
-      if (!window.confirm(`Rescindir contrato de ${jogador.nome}? Multa: R$ ${multa.toLocaleString()}`)) return;
+      const multa =
+        jogador.contrato && jogador.contrato.rescisao
+          ? jogador.contrato.rescisao
+          : 0;
+      if (
+        !window.confirm(
+          `Rescindir contrato de ${
+            jogador.nome
+          }? Multa: R$ ${multa.toLocaleString()}`
+        )
+      )
+        return;
       // Paga multa
       const orcamentoAtual = getOrcamento();
       setOrcamento(orcamentoAtual - multa);
@@ -264,11 +339,14 @@ function renderElenco() {
       });
       // Remove do elenco
       liberarJogador(idx);
-      adicionarNotificacaoInbox && adicionarNotificacaoInbox({
-        tipo: "contrato",
-        mensagem: `Contrato de ${jogador.nome} foi rescindido. Multa paga: R$ ${multa.toLocaleString()}`,
-        data: new Date().toISOString(),
-      });
+      adicionarNotificacaoInbox &&
+        adicionarNotificacaoInbox({
+          tipo: "contrato",
+          mensagem: `Contrato de ${
+            jogador.nome
+          } foi rescindido. Multa paga: R$ ${multa.toLocaleString()}`,
+          data: new Date().toISOString(),
+        });
     });
   });
 
@@ -282,17 +360,23 @@ function renderElenco() {
       let html = `<h2>Histórico de Contratos - ${jogador.nome}</h2><ul class='mt-2'>`;
       jogador.contrato.historico.forEach((h) => {
         html += `<li class='mb-1'>
-          <b>${h.tipo}</b> - Início: ${new Date(h.inicio).toLocaleDateString()} | Fim: ${new Date(h.fim).toLocaleDateString()}<br>
+          <b>${h.tipo}</b> - Início: ${new Date(
+          h.inicio
+        ).toLocaleDateString()} | Fim: ${new Date(
+          h.fim
+        ).toLocaleDateString()}<br>
           Salário: R$ ${h.salario.toLocaleString()} | Rescisão: R$ ${h.rescisao.toLocaleString()}
         </li>`;
       });
-      html += '</ul>';
+      html += "</ul>";
       // Modal simples
-      const modal = document.createElement('div');
-      modal.style = 'position:fixed;top:0;left:0;width:100vw;height:100vh;background:#0008;z-index:9999;display:flex;align-items:center;justify-content:center;';
+      const modal = document.createElement("div");
+      modal.style =
+        "position:fixed;top:0;left:0;width:100vw;height:100vh;background:#0008;z-index:9999;display:flex;align-items:center;justify-content:center;";
       modal.innerHTML = `<div class='bg-white p-6 rounded shadow max-w-md'>${html}<br><button id='fechar-hist-modal' class='mt-4 bg-blue-600 text-white px-4 py-2 rounded'>Fechar</button></div>`;
       document.body.appendChild(modal);
-      document.getElementById('fechar-hist-modal').onclick = () => modal.remove();
+      document.getElementById("fechar-hist-modal").onclick = () =>
+        modal.remove();
     });
   });
 
@@ -337,13 +421,16 @@ function contratarJogador(jogador) {
 
   // Limite de 7 jogadores
   if (elenco.length >= 7) {
-    alert("Você já tem 7 jogadores no seu time. Não é possível contratar mais.");
+    alert(
+      "Você já tem 7 jogadores no seu time. Não é possível contratar mais."
+    );
     return false;
   }
 
   // Calcula rating e preço (padroniza aqui)
   jogador.rating = calcularRating(jogador);
-  jogador.preco = jogador.preco || Math.round(jogador.rating ** 2 * 100 + 50000);
+  jogador.preco =
+    jogador.preco || Math.round(jogador.rating ** 2 * 100 + 50000);
 
   // Cria contrato inicial se não existir
   if (!jogador.contrato) {

@@ -1,3 +1,115 @@
+// --- EVOLUÇÃO ANUAL DOS JOGADORES ---
+function evoluirJogadoresAnoNovo() {
+  // Elenco do usuário
+  let elenco = JSON.parse(localStorage.getItem("elenco") || "[]");
+  elenco.forEach(jogador => {
+    if (!jogador.rating) jogador.rating = calcularRating(jogador);
+    if (!Array.isArray(jogador.evolucaoAnual)) jogador.evolucaoAnual = [];
+    // Salva rating anterior
+    const ratingAnterior = jogador.rating;
+    // Evolução baseada no potencial
+    let novoRating = jogador.rating;
+    if (jogador.potencial && jogador.rating < jogador.potencial) {
+      // Pode evoluir até o potencial, com pequena chance de passar
+      let ganho = Math.floor(Math.random() * 3) + 1; // 1 a 3
+      novoRating = Math.min(jogador.potencial, jogador.rating + ganho);
+      // Pequena chance de "explosão"
+      if (Math.random() < 0.05 && novoRating < 99) novoRating++;
+    } else if (jogador.rating > jogador.potencial) {
+      // Decai se passou do potencial
+      let perda = Math.floor(Math.random() * 2) + 1; // 1 ou 2
+      novoRating = Math.max(jogador.potencial, jogador.rating - perda);
+    } else if (jogador.rating > 70 && Math.random() < 0.2) {
+      // Jogadores mais velhos podem perder rating
+      novoRating = Math.max(40, jogador.rating - 1);
+    }
+    // Calcula diferença
+    const diff = novoRating - ratingAnterior;
+    jogador.rating = novoRating;
+    jogador.evolucaoAnual.push({
+      ano: getDataJogo().getFullYear(),
+      rating: novoRating,
+      diff: diff
+    });
+  });
+  localStorage.setItem("elenco", JSON.stringify(elenco));
+  // Mercado
+  let mercado = JSON.parse(localStorage.getItem("mercado") || "[]");
+  mercado.forEach(jogador => {
+    if (!jogador.rating) jogador.rating = calcularRating(jogador);
+    if (!Array.isArray(jogador.evolucaoAnual)) jogador.evolucaoAnual = [];
+    const ratingAnterior = jogador.rating;
+    let novoRating = jogador.rating;
+    if (jogador.potencial && jogador.rating < jogador.potencial) {
+      let ganho = Math.floor(Math.random() * 3) + 1;
+      novoRating = Math.min(jogador.potencial, jogador.rating + ganho);
+      if (Math.random() < 0.05 && novoRating < 99) novoRating++;
+    } else if (jogador.rating > jogador.potencial) {
+      let perda = Math.floor(Math.random() * 2) + 1;
+      novoRating = Math.max(jogador.potencial, jogador.rating - perda);
+    } else if (jogador.rating > 70 && Math.random() < 0.2) {
+      novoRating = Math.max(40, jogador.rating - 1);
+    }
+    const diff = novoRating - ratingAnterior;
+    jogador.rating = novoRating;
+    jogador.evolucaoAnual.push({
+      ano: getDataJogo().getFullYear(),
+      rating: novoRating,
+      diff: diff
+    });
+  });
+  localStorage.setItem("mercado", JSON.stringify(mercado));
+}
+
+// Hook para detectar virada do ano ao avançar semana
+let ultimoAnoJogo = getDataJogo().getFullYear();
+function checarViradaAnoJogo() {
+  const anoAtual = getDataJogo().getFullYear();
+  if (anoAtual !== ultimoAnoJogo) {
+    evoluirJogadoresAnoNovo();
+    ultimoAnoJogo = anoAtual;
+  }
+}
+
+// --- SISTEMA DE DATA DO JOGO ---
+function getDataJogo() {
+  let data = localStorage.getItem('dataJogo');
+  if (!data) {
+    // Inicializa em 1 de janeiro de 2025
+    data = new Date('2025-01-01T00:00:00Z').toISOString();
+    localStorage.setItem('dataJogo', data);
+  }
+  return new Date(data);
+}
+
+function setDataJogo(novaData) {
+  localStorage.setItem('dataJogo', novaData.toISOString());
+}
+
+function avancarSemanaJogo() {
+  let data = getDataJogo();
+  data.setDate(data.getDate() + 7);
+  setDataJogo(data);
+  renderDataJogo();
+}
+
+function renderDataJogo() {
+  let data = getDataJogo();
+  let el = document.getElementById('data-jogo');
+  if (!el) {
+    // Cria elemento na interface se não existir
+    el = document.createElement('div');
+    el.id = 'data-jogo';
+    el.className = 'text-center text-sm font-semibold my-2';
+    const header = document.querySelector('header');
+    if (header) header.parentNode.insertBefore(el, header.nextSibling);
+    else document.body.insertBefore(el, document.body.firstChild);
+  }
+  el.textContent = 'Data do jogo: ' + data.toLocaleDateString('pt-BR', { day: '2-digit', month: 'short', year: 'numeric' });
+}
+
+// Chama renderização da data ao carregar
+document.addEventListener('DOMContentLoaded', renderDataJogo);
 // main.js
 
 // Evento disparado quando DOM estiver carregado
@@ -217,75 +329,113 @@ jogadoresMercado.forEach((jogador) => {
 });
 salvarMercado();
 
-// Função de evolução semanal de todos os jogadores (elenco e mercado)
-function evoluirJogadoresSemana() {
-  // Evolui jogadores do elenco do usuário
+// Função de evolução anual de todos os jogadores (elenco e mercado)
+function evoluirJogadoresAnoNovo() {
+  // Elenco do usuário
   let elenco = JSON.parse(localStorage.getItem("elenco") || "[]");
   elenco.forEach(jogador => {
-    evoluirJogador(jogador, true);
+    if (!jogador.rating) jogador.rating = calcularRating(jogador);
+    if (!Array.isArray(jogador.evolucaoAnual)) jogador.evolucaoAnual = [];
+    // Idade só aumenta na virada do ano
+    jogador.idade = (jogador.idade || 18) + 1;
+    // Potencial diminui com a idade (após 28 anos, -1 por ano, após 32 anos, -2 por ano)
+    if (jogador.idade >= 28 && jogador.potencial > 60) {
+      let decaimento = 1;
+      if (jogador.idade >= 32) decaimento = 2;
+      jogador.potencial = Math.max(40, jogador.potencial - decaimento);
+    }
+    // Salva rating e potencial anteriores
+    const ratingAnterior = jogador.rating;
+    const potencialAnterior = jogador.potencial;
+    // Evolução baseada no potencial
+    let novoRating = jogador.rating;
+    if (jogador.potencial && jogador.rating < jogador.potencial) {
+      // Pode evoluir até o potencial, com pequena chance de passar
+      let ganho = Math.floor(Math.random() * 3) + 1; // 1 a 3
+      novoRating = Math.min(jogador.potencial, jogador.rating + ganho);
+      // Pequena chance de "explosão"
+      if (Math.random() < 0.05 && novoRating < jogador.potencial) novoRating++;
+    } else if (jogador.rating > jogador.potencial) {
+      // Decai se passou do potencial
+      let perda = Math.floor(Math.random() * 2) + 1; // 1 ou 2
+      novoRating = Math.max(jogador.potencial, jogador.rating - perda);
+    } else if (jogador.rating > 70 && Math.random() < 0.2) {
+      // Jogadores mais velhos podem perder rating
+      novoRating = Math.max(40, jogador.rating - 1);
+    }
+    // Garante que rating nunca ultrapasse potencial
+    if (novoRating > jogador.potencial) novoRating = jogador.potencial;
+    // Calcula diferença
+    const diff = novoRating - ratingAnterior;
+    const diffPot = jogador.potencial - potencialAnterior;
+    jogador.rating = novoRating;
+    jogador.evolucaoAnual.push({
+      ano: getDataJogo().getFullYear(),
+      rating: novoRating,
+      diff: diff,
+      potencial: jogador.potencial,
+      diffPot: diffPot
+    });
   });
   localStorage.setItem("elenco", JSON.stringify(elenco));
-  // Evolui jogadores do mercado
+  // Mercado
   let mercado = JSON.parse(localStorage.getItem("mercado") || "[]");
   mercado.forEach(jogador => {
-    evoluirJogador(jogador, false);
+    if (!jogador.rating) jogador.rating = calcularRating(jogador);
+    if (!Array.isArray(jogador.evolucaoAnual)) jogador.evolucaoAnual = [];
+    jogador.idade = (jogador.idade || 18) + 1;
+    if (jogador.idade >= 28 && jogador.potencial > 60) {
+      let decaimento = 1;
+      if (jogador.idade >= 32) decaimento = 2;
+      jogador.potencial = Math.max(40, jogador.potencial - decaimento);
+    }
+    const ratingAnterior = jogador.rating;
+    const potencialAnterior = jogador.potencial;
+    let novoRating = jogador.rating;
+    if (jogador.potencial && jogador.rating < jogador.potencial) {
+      let ganho = Math.floor(Math.random() * 3) + 1;
+      novoRating = Math.min(jogador.potencial, jogador.rating + ganho);
+      if (Math.random() < 0.05 && novoRating < jogador.potencial) novoRating++;
+    } else if (jogador.rating > jogador.potencial) {
+      let perda = Math.floor(Math.random() * 2) + 1;
+      novoRating = Math.max(jogador.potencial, jogador.rating - perda);
+    } else if (jogador.rating > 70 && Math.random() < 0.2) {
+      novoRating = Math.max(40, jogador.rating - 1);
+    }
+    if (novoRating > jogador.potencial) novoRating = jogador.potencial;
+    const diff = novoRating - ratingAnterior;
+    const diffPot = jogador.potencial - potencialAnterior;
+    jogador.rating = novoRating;
+    jogador.evolucaoAnual.push({
+      ano: getDataJogo().getFullYear(),
+      rating: novoRating,
+      diff: diff,
+      potencial: jogador.potencial,
+      diffPot: diffPot
+    });
   });
   localStorage.setItem("mercado", JSON.stringify(mercado));
 }
 
-// Função de evolução individual
-function evoluirJogador(jogador, isElenco) {
-  // Parâmetros base
-  if (!jogador.potencial) return;
-  if (!jogador.rating) jogador.rating = calcularRating(jogador);
-  if (!Array.isArray(jogador.evolucao)) jogador.evolucao = [];
-  // Idade influencia: até 23 anos evolui mais, 24-27 pouco, 28+ pode decair
-  let delta = 0;
-  if (jogador.idade <= 21) delta += Math.random() < 0.7 ? 1 : 0;
-  else if (jogador.idade <= 23) delta += Math.random() < 0.5 ? 1 : 0;
-  else if (jogador.idade <= 27) delta += Math.random() < 0.2 ? 1 : 0;
-  else if (jogador.idade >= 28 && Math.random() < 0.3) delta -= 1;
-  // Performance: se jogou e rating > 80, pode evoluir mais
-  if (isElenco && jogador.rating > 80 && Math.random() < 0.5) delta += 1;
-  // Potencial: não passa do potencial
-  let novoRating = Math.max(40, Math.min(jogador.potencial, jogador.rating + delta));
-  // Pequena chance de "explosão" (superar potencial)
-  if (Math.random() < 0.01 && novoRating < 99) {
-    novoRating += 1;
-    jogador.potencial = Math.min(99, jogador.potencial + 1);
-  }
-  // Pequena chance de "queda" (perder potencial)
-  if (Math.random() < 0.01 && jogador.potencial > 60) {
-    jogador.potencial -= 1;
-    if (novoRating > jogador.potencial) novoRating = jogador.potencial;
-  }
-  // Atualiza rating e histórico
-  jogador.rating = novoRating;
-  // Atualiza atributos principais levemente
-  let atributos = ["mira","clutch","suporte","hs","movimentacao","agressividade"];
-  atributos.forEach(attr => {
-    if (typeof jogador[attr] === "number") {
-      let deltaA = 0;
-      if (delta > 0 && jogador[attr] < 99) deltaA = Math.random() < 0.5 ? 1 : 0;
-      if (delta < 0 && jogador[attr] > 40) deltaA = Math.random() < 0.5 ? -1 : 0;
-      jogador[attr] = Math.max(40, Math.min(99, jogador[attr] + deltaA));
-    }
-  });
-  // Salva histórico semanal
-  jogador.evolucao.push({
-    data: Date.now(),
-    rating: jogador.rating,
-    overall: Math.round(((jogador.mira||0)+(jogador.clutch||0)+(jogador.suporte||0)+(jogador.hs||0)+(jogador.movimentacao||0)+(jogador.agressividade||0))/6)
-  });
-  // Idade aumenta a cada 52 semanas
-  if (!jogador._semanas) jogador._semanas = 0;
-  jogador._semanas++;
-  if (jogador._semanas % 52 === 0) jogador.idade++;
+// Chama checagem de virada de ano ao avançar semana
+const _oldAvancarSemanaJogo = typeof avancarSemanaJogo === 'function' ? avancarSemanaJogo : null;
+avancarSemanaJogo = function() {
+  if (_oldAvancarSemanaJogo) _oldAvancarSemanaJogo();
+  checarViradaAnoJogo();
+};
+
+// Função para avançar 1 mês no calendário do jogo
+function avancarMesJogo() {
+  let data = getDataJogo();
+  data.setMonth(data.getMonth() + 1);
+  setDataJogo(data);
+  renderDataJogo();
+  checarViradaAnoJogo();
 }
 
-// Chama evolução semanal ao avançar semana (hook no mercado.js)
+// Expor globalmente para uso no mercado.js
 if (typeof window !== 'undefined') {
-  window.evoluirJogadoresSemana = evoluirJogadoresSemana;
+  window.avancarMesJogo = avancarMesJogo;
 }
 
 // --- SIMULAÇÃO DE PARTIDA ---
