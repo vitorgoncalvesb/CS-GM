@@ -195,13 +195,98 @@ let jogadoresMercado = JSON.parse(localStorage.getItem("mercado")) || [
   }
 ];
 
-// Garante que todos os jogadores tenham rating calculado
+// Garante que todos os jogadores tenham rating, potencial e histórico de evolução
 jogadoresMercado.forEach((jogador) => {
   if (typeof jogador.rating === "undefined") {
     jogador.rating = calcularRating(jogador);
   }
+  // Potencial: se não existir, define entre rating+5 e 99 (máximo 99)
+  if (typeof jogador.potencial === "undefined") {
+    let minPot = Math.min(99, jogador.rating + 5);
+    let maxPot = Math.max(minPot + 1, Math.min(99, jogador.rating + 20));
+    jogador.potencial = Math.floor(Math.random() * (maxPot - minPot + 1)) + minPot;
+  }
+  // Histórico de evolução
+  if (!Array.isArray(jogador.evolucao)) {
+    jogador.evolucao = [{
+      data: Date.now(),
+      rating: jogador.rating,
+      overall: Math.round(((jogador.mira||0)+(jogador.clutch||0)+(jogador.suporte||0)+(jogador.hs||0)+(jogador.movimentacao||0)+(jogador.agressividade||0))/6)
+    }];
+  }
 });
 salvarMercado();
+
+// Função de evolução semanal de todos os jogadores (elenco e mercado)
+function evoluirJogadoresSemana() {
+  // Evolui jogadores do elenco do usuário
+  let elenco = JSON.parse(localStorage.getItem("elenco") || "[]");
+  elenco.forEach(jogador => {
+    evoluirJogador(jogador, true);
+  });
+  localStorage.setItem("elenco", JSON.stringify(elenco));
+  // Evolui jogadores do mercado
+  let mercado = JSON.parse(localStorage.getItem("mercado") || "[]");
+  mercado.forEach(jogador => {
+    evoluirJogador(jogador, false);
+  });
+  localStorage.setItem("mercado", JSON.stringify(mercado));
+}
+
+// Função de evolução individual
+function evoluirJogador(jogador, isElenco) {
+  // Parâmetros base
+  if (!jogador.potencial) return;
+  if (!jogador.rating) jogador.rating = calcularRating(jogador);
+  if (!Array.isArray(jogador.evolucao)) jogador.evolucao = [];
+  // Idade influencia: até 23 anos evolui mais, 24-27 pouco, 28+ pode decair
+  let delta = 0;
+  if (jogador.idade <= 21) delta += Math.random() < 0.7 ? 1 : 0;
+  else if (jogador.idade <= 23) delta += Math.random() < 0.5 ? 1 : 0;
+  else if (jogador.idade <= 27) delta += Math.random() < 0.2 ? 1 : 0;
+  else if (jogador.idade >= 28 && Math.random() < 0.3) delta -= 1;
+  // Performance: se jogou e rating > 80, pode evoluir mais
+  if (isElenco && jogador.rating > 80 && Math.random() < 0.5) delta += 1;
+  // Potencial: não passa do potencial
+  let novoRating = Math.max(40, Math.min(jogador.potencial, jogador.rating + delta));
+  // Pequena chance de "explosão" (superar potencial)
+  if (Math.random() < 0.01 && novoRating < 99) {
+    novoRating += 1;
+    jogador.potencial = Math.min(99, jogador.potencial + 1);
+  }
+  // Pequena chance de "queda" (perder potencial)
+  if (Math.random() < 0.01 && jogador.potencial > 60) {
+    jogador.potencial -= 1;
+    if (novoRating > jogador.potencial) novoRating = jogador.potencial;
+  }
+  // Atualiza rating e histórico
+  jogador.rating = novoRating;
+  // Atualiza atributos principais levemente
+  let atributos = ["mira","clutch","suporte","hs","movimentacao","agressividade"];
+  atributos.forEach(attr => {
+    if (typeof jogador[attr] === "number") {
+      let deltaA = 0;
+      if (delta > 0 && jogador[attr] < 99) deltaA = Math.random() < 0.5 ? 1 : 0;
+      if (delta < 0 && jogador[attr] > 40) deltaA = Math.random() < 0.5 ? -1 : 0;
+      jogador[attr] = Math.max(40, Math.min(99, jogador[attr] + deltaA));
+    }
+  });
+  // Salva histórico semanal
+  jogador.evolucao.push({
+    data: Date.now(),
+    rating: jogador.rating,
+    overall: Math.round(((jogador.mira||0)+(jogador.clutch||0)+(jogador.suporte||0)+(jogador.hs||0)+(jogador.movimentacao||0)+(jogador.agressividade||0))/6)
+  });
+  // Idade aumenta a cada 52 semanas
+  if (!jogador._semanas) jogador._semanas = 0;
+  jogador._semanas++;
+  if (jogador._semanas % 52 === 0) jogador.idade++;
+}
+
+// Chama evolução semanal ao avançar semana (hook no mercado.js)
+if (typeof window !== 'undefined') {
+  window.evoluirJogadoresSemana = evoluirJogadoresSemana;
+}
 
 // --- SIMULAÇÃO DE PARTIDA ---
 
@@ -397,76 +482,77 @@ const TIMES_DISPONIVEIS = [
 // --- JOGADORES POR TIME ---
 const JOGADORES_POR_TIME = {
   "Vitality": [
-    { nome: "ZywOo", funcao: "AWPer", idade: 24, mira: 99, clutch: 95, suporte: 85, hs: 97, movimentacao: 96, agressividade: 90, preco: 200000 },
-    { nome: "apEX", funcao: "IGL", idade: 33, mira: 85, clutch: 88, suporte: 95, hs: 84, movimentacao: 86, agressividade: 85, preco: 120000 },
-    { nome: "flameZ", funcao: "Rifler", idade: 22, mira: 93, clutch: 90, suporte: 82, hs: 92, movimentacao: 94, agressividade: 92, preco: 145000 },
-    { nome: "mezii", funcao: "Rifler", idade: 27, mira: 90, clutch: 89, suporte: 88, hs: 88, movimentacao: 90, agressividade: 86, preco: 125000 },
-    { nome: "ropz", funcao: "Rifler", idade: 25, mira: 95, clutch: 93, suporte: 84, hs: 94, movimentacao: 94, agressividade: 88, preco: 170000 }
+    { nome: "ZywOo", funcao: "AWPer", idade: 24, mira: 99, clutch: 95, suporte: 85, hs: 97, movimentacao: 96, agressividade: 90, preco: 200000, potencial: 98 },
+    { nome: "apEX", funcao: "IGL", idade: 33, mira: 85, clutch: 88, suporte: 95, hs: 84, movimentacao: 86, agressividade: 85, preco: 120000, potencial: 83 },
+    { nome: "flameZ", funcao: "Rifler", idade: 22, mira: 93, clutch: 90, suporte: 82, hs: 92, movimentacao: 94, agressividade: 92, preco: 145000, potencial: 96 },
+    { nome: "mezii", funcao: "Rifler", idade: 27, mira: 90, clutch: 89, suporte: 88, hs: 88, movimentacao: 90, agressividade: 86, preco: 125000, potencial: 92 },
+    { nome: "ropz", funcao: "Rifler", idade: 25, mira: 95, clutch: 93, suporte: 84, hs: 94, movimentacao: 94, agressividade: 88, preco: 170000, potencial: 95 }
   ],
   "Spirit": [
-    { nome: "sh1ro", funcao: "AWPer", idade: 24, mira: 94, clutch: 93, suporte: 85, hs: 92, movimentacao: 92, agressividade: 80, preco: 150000 },
-    { nome: "chopper", funcao: "IGL", idade: 28, mira: 86, clutch: 90, suporte: 94, hs: 84, movimentacao: 86, agressividade: 82, preco: 115000 },
-    { nome: "donk", funcao: "Rifler", idade: 18, mira: 98, clutch: 92, suporte: 72, hs: 97, movimentacao: 96, agressividade: 97, preco: 180000 },
-    { nome: "zont1x", funcao: "Rifler", idade: 21, mira: 89, clutch: 88, suporte: 87, hs: 86, movimentacao: 88, agressividade: 83, preco: 120000 },
-    { nome: "zweih", funcao: "Rifler", idade: 19, mira: 86, clutch: 84, suporte: 85, hs: 83, movimentacao: 86, agressividade: 82, preco: 100000 }
+    { nome: "sh1ro", funcao: "AWPer", idade: 24, mira: 94, clutch: 93, suporte: 85, hs: 92, movimentacao: 92, agressividade: 80, preco: 150000, potencial: 97 },
+    { nome: "chopper", funcao: "IGL", idade: 28, mira: 86, clutch: 90, suporte: 94, hs: 84, movimentacao: 86, agressividade: 82, preco: 115000, potencial: 90 },
+    { nome: "donk", funcao: "Rifler", idade: 18, mira: 98, clutch: 92, suporte: 72, hs: 97, movimentacao: 96, agressividade: 97, preco: 180000, potencial: 99 },
+    { nome: "zont1x", funcao: "Rifler", idade: 21, mira: 89, clutch: 88, suporte: 87, hs: 86, movimentacao: 88, agressividade: 83, preco: 120000, potencial: 95 },
+    { nome: "zweih", funcao: "Rifler", idade: 19, mira: 86, clutch: 84, suporte: 85, hs: 83, movimentacao: 86, agressividade: 82, preco: 100000, potencial: 94 }
   ],
   "The MongolZ": [
-    { nome: "910", funcao: "AWPer", idade: 23, mira: 91, clutch: 90, suporte: 78, hs: 89, movimentacao: 91, agressividade: 88, preco: 130000 },
-    { nome: "bLitz", funcao: "IGL", idade: 26, mira: 88, clutch: 88, suporte: 90, hs: 86, movimentacao: 88, agressividade: 85, preco: 120000 },
-    { nome: "Techno4k", funcao: "Rifler", idade: 21, mira: 90, clutch: 87, suporte: 84, hs: 89, movimentacao: 90, agressividade: 90, preco: 120000 },
-    { nome: "Senzu", funcao: "Rifler", idade: 20, mira: 87, clutch: 86, suporte: 86, hs: 85, movimentacao: 86, agressividade: 82, preco: 105000 },
-    { nome: "mzinho", funcao: "Rifler", idade: 19, mira: 86, clutch: 84, suporte: 85, hs: 83, movimentacao: 86, agressividade: 83, preco: 100000 }
+    { nome: "910", funcao: "AWPer", idade: 23, mira: 91, clutch: 90, suporte: 78, hs: 89, movimentacao: 91, agressividade: 88, preco: 130000, potencial: 94 },
+    { nome: "bLitz", funcao: "IGL", idade: 26, mira: 88, clutch: 88, suporte: 90, hs: 86, movimentacao: 88, agressividade: 85, preco: 120000, potencial: 91 },
+    { nome: "Techno4k", funcao: "Rifler", idade: 21, mira: 90, clutch: 87, suporte: 84, hs: 89, movimentacao: 90, agressividade: 90, preco: 120000, potencial: 95 },
+    { nome: "Senzu", funcao: "Rifler", idade: 20, mira: 87, clutch: 86, suporte: 86, hs: 85, movimentacao: 86, agressividade: 82, preco: 105000, potencial: 94 },
+    { nome: "mzinho", funcao: "Rifler", idade: 19, mira: 86, clutch: 84, suporte: 85, hs: 83, movimentacao: 86, agressividade: 83, preco: 100000, potencial: 93 }
   ],
   "MOUZ": [
-    { nome: "torzsi", funcao: "AWPer", idade: 23, mira: 92, clutch: 89, suporte: 82, hs: 90, movimentacao: 91, agressividade: 86, preco: 135000 },
-    { nome: "xertioN", funcao: "Rifler", idade: 21, mira: 89, clutch: 88, suporte: 90, hs: 88, movimentacao: 90, agressividade: 87, preco: 125000 },
-    { nome: "Spinx", funcao: "Rifler", idade: 25, mira: 93, clutch: 90, suporte: 84, hs: 92, movimentacao: 92, agressividade: 89, preco: 155000 },
-    { nome: "Jimpphat", funcao: "Rifler", idade: 19, mira: 89, clutch: 87, suporte: 86, hs: 86, movimentacao: 88, agressividade: 84, preco: 115000 },
-    { nome: "Brollan", funcao: "IGL", idade: 23, mira: 90, clutch: 88, suporte: 85, hs: 89, movimentacao: 90, agressividade: 86, preco: 130000 }
+    { nome: "torzsi", funcao: "AWPer", idade: 23, mira: 92, clutch: 89, suporte: 82, hs: 90, movimentacao: 91, agressividade: 86, preco: 135000, potencial: 95 },
+    { nome: "xertioN", funcao: "Rifler", idade: 21, mira: 89, clutch: 88, suporte: 90, hs: 88, movimentacao: 90, agressividade: 87, preco: 125000, potencial: 94 },
+    { nome: "Spinx", funcao: "Rifler", idade: 25, mira: 93, clutch: 90, suporte: 84, hs: 92, movimentacao: 92, agressividade: 89, preco: 155000, potencial: 92 },
+    { nome: "Jimpphat", funcao: "Rifler", idade: 19, mira: 89, clutch: 87, suporte: 86, hs: 86, movimentacao: 88, agressividade: 84, preco: 115000, potencial: 94 },
+    { nome: "Brollan", funcao: "IGL", idade: 23, mira: 90, clutch: 88, suporte: 85, hs: 89, movimentacao: 90, agressividade: 86, preco: 130000, potencial: 93 }
   ],
   "FURIA": [
-    { nome: "FalleN", funcao: "IGL", idade: 34, mira: 90, clutch: 92, suporte: 94, hs: 85, movimentacao: 84, agressividade: 78, preco: 130000 },
-    { nome: "yuurih", funcao: "Rifler", idade: 26, mira: 92, clutch: 89, suporte: 90, hs: 90, movimentacao: 90, agressividade: 86, preco: 145000 },
-    { nome: "YEKINDAR", funcao: "Rifler", idade: 26, mira: 93, clutch: 88, suporte: 80, hs: 91, movimentacao: 92, agressividade: 93, preco: 150000 },
-    { nome: "KSCERATO", funcao: "Rifler", idade: 26, mira: 93, clutch: 90, suporte: 88, hs: 90, movimentacao: 91, agressividade: 88, preco: 150000 },
-    { nome: "molodoy", funcao: "AWPer", idade: 19, mira: 86, clutch: 84, suporte: 86, hs: 84, movimentacao: 86, agressividade: 82, preco: 100000 }
+    { nome: "FalleN", funcao: "IGL", idade: 34, mira: 90, clutch: 92, suporte: 94, hs: 85, movimentacao: 84, agressividade: 78, preco: 130000, potencial: 82 },
+    { nome: "yuurih", funcao: "Rifler", idade: 26, mira: 92, clutch: 89, suporte: 90, hs: 90, movimentacao: 90, agressividade: 86, preco: 145000, potencial: 91 },
+    { nome: "YEKINDAR", funcao: "Rifler", idade: 26, mira: 93, clutch: 88, suporte: 80, hs: 91, movimentacao: 92, agressividade: 93, preco: 150000, potencial: 92 },
+    { nome: "KSCERATO", funcao: "Rifler", idade: 26, mira: 93, clutch: 90, suporte: 88, hs: 90, movimentacao: 91, agressividade: 88, preco: 150000, potencial: 92 },
+    { nome: "molodoy", funcao: "AWPer", idade: 19, mira: 86, clutch: 84, suporte: 86, hs: 84, movimentacao: 86, agressividade: 82, preco: 100000, potencial: 95 }
   ],
   "Aurora": [
-    { nome: "woxic", funcao: "AWPer", idade: 27, mira: 92, clutch: 89, suporte: 82, hs: 90, movimentacao: 90, agressividade: 86, preco: 135000 },
-    { nome: "MAJ3R", funcao: "IGL", idade: 34, mira: 85, clutch: 88, suporte: 92, hs: 83, movimentacao: 84, agressividade: 80, preco: 110000 },
-    { nome: "XANTARES", funcao: "Rifler", idade: 30, mira: 96, clutch: 90, suporte: 80, hs: 95, movimentacao: 93, agressividade: 92, preco: 165000 },
-    { nome: "Wicadia", funcao: "Rifler", idade: 19, mira: 90, clutch: 86, suporte: 84, hs: 88, movimentacao: 90, agressividade: 88, preco: 120000 },
-    { nome: "jottAAA", funcao: "Rifler", idade: 21, mira: 87, clutch: 84, suporte: 85, hs: 85, movimentacao: 86, agressividade: 83, preco: 105000 }
+    { nome: "woxic", funcao: "AWPer", idade: 27, mira: 92, clutch: 89, suporte: 82, hs: 90, movimentacao: 90, agressividade: 86, preco: 135000, potencial: 91 },
+    { nome: "MAJ3R", funcao: "IGL", idade: 34, mira: 85, clutch: 88, suporte: 92, hs: 83, movimentacao: 84, agressividade: 80, preco: 110000, potencial: 85 },
+    { nome: "XANTARES", funcao: "Rifler", idade: 30, mira: 96, clutch: 90, suporte: 80, hs: 95, movimentacao: 93, agressividade: 92, preco: 165000, potencial: 92 },
+    { nome: "Wicadia", funcao: "Rifler", idade: 19, mira: 90, clutch: 86, suporte: 84, hs: 88, movimentacao: 90, agressividade: 88, preco: 120000, potencial: 94 },
+    { nome: "jottAAA", funcao: "Rifler", idade: 21, mira: 87, clutch: 84, suporte: 85, hs: 85, movimentacao: 86, agressividade: 83, preco: 105000, potencial: 93 }
   ],
   "Natus Vincere": [
-    { nome: "w0nderful", funcao: "AWPer", idade: 21, mira: 92, clutch: 90, suporte: 82, hs: 90, movimentacao: 90, agressividade: 84, preco: 140000 },
-    { nome: "Aleksib", funcao: "IGL", idade: 28, mira: 86, clutch: 90, suporte: 96, hs: 82, movimentacao: 84, agressividade: 78, preco: 120000 },
-    { nome: "iM", funcao: "Rifler", idade: 26, mira: 92, clutch: 88, suporte: 82, hs: 91, movimentacao: 92, agressividade: 90, preco: 145000 },
-    { nome: "b1t", funcao: "Rifler", idade: 22, mira: 92, clutch: 88, suporte: 86, hs: 92, movimentacao: 90, agressividade: 86, preco: 150000 },
-    { nome: "makazze", funcao: "Rifler", idade: 18, mira: 87, clutch: 84, suporte: 85, hs: 85, movimentacao: 87, agressividade: 84, preco: 100000 }
+    { nome: "w0nderful", funcao: "AWPer", idade: 21, mira: 92, clutch: 90, suporte: 82, hs: 90, movimentacao: 90, agressividade: 84, preco: 140000, potencial: 95 },
+    { nome: "Aleksib", funcao: "IGL", idade: 28, mira: 86, clutch: 90, suporte: 96, hs: 82, movimentacao: 84, agressividade: 78, preco: 120000, potencial: 90 },
+    { nome: "iM", funcao: "Rifler", idade: 26, mira: 92, clutch: 88, suporte: 82, hs: 91, movimentacao: 92, agressividade: 90, preco: 145000, potencial: 92 },
+    { nome: "b1t", funcao: "Rifler", idade: 22, mira: 92, clutch: 88, suporte: 86, hs: 92, movimentacao: 90, agressividade: 86, preco: 150000, potencial: 94 },
+    { nome: "makazze", funcao: "Rifler", idade: 18, mira: 87, clutch: 84, suporte: 85, hs: 85, movimentacao: 87, agressividade: 84, preco: 100000, potencial: 96 }
   ],
   "Falcons": [
-    { nome: "m0NESY", funcao: "AWPer", idade: 20, mira: 97, clutch: 92, suporte: 78, hs: 95, movimentacao: 95, agressividade: 92, preco: 185000 },
-    { nome: "kyxsan", funcao: "IGL", idade: 26, mira: 87, clutch: 88, suporte: 92, hs: 84, movimentacao: 86, agressividade: 82, preco: 115000 },
-    { nome: "NiKo", funcao: "Rifler", idade: 28, mira: 98, clutch: 92, suporte: 82, hs: 96, movimentacao: 95, agressividade: 92, preco: 190000 },
-    { nome: "TeSeS", funcao: "Rifler", idade: 25, mira: 90, clutch: 88, suporte: 87, hs: 88, movimentacao: 89, agressividade: 85, preco: 135000 },
-    { nome: "kyousuke", funcao: "Rifler", idade: 21, mira: 86, clutch: 84, suporte: 85, hs: 84, movimentacao: 86, agressividade: 83, preco: 100000 }
+    { nome: "m0NESY", funcao: "AWPer", idade: 20, mira: 97, clutch: 92, suporte: 78, hs: 95, movimentacao: 95, agressividade: 92, preco: 185000, potencial: 99 },
+    { nome: "kyxsan", funcao: "IGL", idade: 26, mira: 87, clutch: 88, suporte: 92, hs: 84, movimentacao: 86, agressividade: 82, preco: 115000, potencial: 91 },
+    { nome: "NiKo", funcao: "Rifler", idade: 28, mira: 98, clutch: 92, suporte: 82, hs: 96, movimentacao: 95, agressividade: 92, preco: 190000, potencial: 95 },
+    { nome: "TeSeS", funcao: "Rifler", idade: 25, mira: 90, clutch: 88, suporte: 87, hs: 88, movimentacao: 89, agressividade: 85, preco: 135000, potencial: 93 },
+    { nome: "kyousuke", funcao: "Rifler", idade: 21, mira: 86, clutch: 84, suporte: 85, hs: 84, movimentacao: 86, agressividade: 83, preco: 100000, potencial: 94 }
   ],
   "Faze": [
-    { nome: "broky", funcao: "AWPer", idade: 25, mira: 94, clutch: 90, suporte: 82, hs: 92, movimentacao: 92, agressividade: 86, preco: 150000 },
-    { nome: "karrigan", funcao: "IGL", idade: 35, mira: 84, clutch: 90, suporte: 96, hs: 82, movimentacao: 82, agressividade: 78, preco: 115000 },
-    { nome: "frozen", funcao: "Rifler", idade: 23, mira: 94, clutch: 90, suporte: 82, hs: 93, movimentacao: 94, agressividade: 90, preco: 160000 },
-    { nome: "rain", funcao: "Rifler", idade: 31, mira: 91, clutch: 89, suporte: 86, hs: 90, movimentacao: 90, agressividade: 86, preco: 140000 },
-    { nome: "jcobbb", funcao: "Rifler", idade: 19, mira: 88, clutch: 85, suporte: 85, hs: 86, movimentacao: 88, agressividade: 86, preco: 110000 }
+    { nome: "broky", funcao: "AWPer", idade: 25, mira: 94, clutch: 90, suporte: 82, hs: 92, movimentacao: 92, agressividade: 86, preco: 150000, potencial: 94 },
+    { nome: "karrigan", funcao: "IGL", idade: 35, mira: 84, clutch: 90, suporte: 96, hs: 82, movimentacao: 82, agressividade: 78, preco: 115000, potencial: 84 },
+    { nome: "frozen", funcao: "Rifler", idade: 23, mira: 94, clutch: 90, suporte: 82, hs: 93, movimentacao: 94, agressividade: 90, preco: 160000, potencial: 95 },
+    { nome: "rain", funcao: "Rifler", idade: 31, mira: 91, clutch: 89, suporte: 86, hs: 90, movimentacao: 90, agressividade: 86, preco: 140000, potencial: 88 },
+    { nome: "jcobbb", funcao: "Rifler", idade: 19, mira: 88, clutch: 85, suporte: 85, hs: 86, movimentacao: 88, agressividade: 86, preco: 110000, potencial: 94 }
   ],
   "Pain": [
-    { nome: "nqz", funcao: "AWPer", idade: 20, mira: 90, clutch: 88, suporte: 82, hs: 89, movimentacao: 90, agressividade: 86, preco: 125000 },
-    { nome: "biguzera", funcao: "IGL", idade: 30, mira: 88, clutch: 88, suporte: 92, hs: 85, movimentacao: 86, agressividade: 82, preco: 120000 },
-    { nome: "dgt", funcao: "Rifler", idade: 22, mira: 91, clutch: 88, suporte: 82, hs: 90, movimentacao: 91, agressividade: 90, preco: 135000 },
-    { nome: "snow", funcao: "Rifler", idade: 21, mira: 87, clutch: 85, suporte: 86, hs: 85, movimentacao: 86, agressividade: 84, preco: 105000 },
-    { nome: "dav1deuS", funcao: "Rifler", idade: 22, mira: 88, clutch: 86, suporte: 86, hs: 86, movimentacao: 87, agressividade: 84, preco: 110000 }
+    { nome: "nqz", funcao: "AWPer", idade: 20, mira: 90, clutch: 88, suporte: 82, hs: 89, movimentacao: 90, agressividade: 86, preco: 125000, potencial: 95 },
+    { nome: "biguzera", funcao: "IGL", idade: 30, mira: 88, clutch: 88, suporte: 92, hs: 85, movimentacao: 86, agressividade: 82, preco: 120000, potencial: 89 },
+    { nome: "dgt", funcao: "Rifler", idade: 22, mira: 91, clutch: 88, suporte: 82, hs: 90, movimentacao: 91, agressividade: 90, preco: 135000, potencial: 94 },
+    { nome: "snow", funcao: "Rifler", idade: 21, mira: 87, clutch: 85, suporte: 86, hs: 85, movimentacao: 86, agressividade: 84, preco: 105000, potencial: 93 },
+    { nome: "dav1deuS", funcao: "Rifler", idade: 22, mira: 88, clutch: 86, suporte: 86, hs: 86, movimentacao: 87, agressividade: 84, preco: 110000, potencial: 93 }
   ]
 };
+
 
 
 // --- SISTEMA DE MÚLTIPLAS CARREIRAS ---
@@ -768,17 +854,26 @@ function mostrarModalSelecaoTime() {
     btn.onclick = () => {
       localStorage.setItem("timeSelecionado", time);
 
-      // Define elenco inicial do time escolhido com rating realista e consistente
+      // Elenco do usuário
       let elenco = (JOGADORES_POR_TIME[time] || []).map(j => {
         let rating = calcularRating(j);
         return { ...j, rating };
       });
       localStorage.setItem("elenco", JSON.stringify(elenco));
 
-      // Remove jogadores do elenco inicial do mercado para evitar duplicidade
-      let mercado = jogadoresMercado.filter(j =>
-        !elenco.some(e => e.nome === j.nome)
-      );
+      // Monta mercado: todos jogadores dos outros times IA, cada um com seu respectivo time
+      let mercado = [];
+      for (const t in JOGADORES_POR_TIME) {
+        if (t === time) continue; // Pula o time do usuário
+        (JOGADORES_POR_TIME[t] || []).forEach(j => {
+          let rating = calcularRating(j);
+          mercado.push({ ...j, rating, time: t });
+        });
+      }
+
+      // Adiciona também os jogadores livres (sem time) que já estavam no mercado
+      let livres = (jogadoresMercado || []).filter(j => !j.time);
+      mercado = mercado.concat(livres);
       localStorage.setItem("mercado", JSON.stringify(mercado));
 
       // Salva carreira automaticamente

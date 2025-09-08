@@ -106,15 +106,23 @@
       if (filtroOverall) jogadores = jogadores.sort((a,b) => filtroOverall==='asc'?a.overall-b.overall:b.overall-a.overall);
       // Render
       document.getElementById('thead-mercado').innerHTML = abaAtual==='free'?theadFree:theadAll;
-      document.getElementById('tbody-mercado').innerHTML = jogadores.map(j => `
+      document.getElementById('tbody-mercado').innerHTML = jogadores.map(j => {
+        // Mostra botão para jogadores livres OU jogadores de times IA (não do usuário)
+        let podeOferecer = false;
+        if (!j.time) {
+          podeOferecer = true;
+        } else if (abaAtual === 'all' && j.time && j.time !== meuTime) {
+          podeOferecer = true;
+        }
+        return `
         <tr>
-          <td>${!j.time?`<button class='oferecer-contrato bg-green-600 text-white px-2 py-1 rounded' data-nome='${j.nome}'>Oferecer Contrato</button>`:''}</td>
+          <td>${podeOferecer?`<button class='oferecer-contrato bg-green-600 text-white px-2 py-1 rounded' data-nome='${j.nome}'>Oferecer Contrato</button>`:''}</td>
           <td class="flex justify-center items-center"><img src="assets/img/${j.nome}.webp" class="h-8 w-8 rounded-full" onerror="this.src='assets/img/default.webp'"/></td>
           <td>${j.nome}</td>
           <td>${j.demandaContrato||'No Demands'}</td>
           <td>${j.posicoes||j.funcao||'-'}</td>
           <td>${j.idade||'-'}</td>
-          ${abaAtual==='all'?`<td>${j.time||'Free Agent'}</td>`:''}
+          ${abaAtual==='all'?`<td>${j.time?`<span class='font-semibold text-blue-700'>${j.time}</span>`:'<span class="text-gray-400">Free Agent</span>'}</td>`:''}
           <td>${j.mira||'-'}</td>
           <td>${j.clutch||'-'}</td>
           <td>${j.hs||'-'}</td>
@@ -124,7 +132,8 @@
           <td>${j.overall||'-'}</td>
           <td>${j.potencial||'-'}</td>
         </tr>
-      `).join('');
+        `;
+      }).join('');
     }
     // --- Eventos de UI ---
     document.getElementById('tab-free').onclick = function(){
