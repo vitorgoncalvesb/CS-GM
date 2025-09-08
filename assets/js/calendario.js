@@ -1,3 +1,278 @@
+// --- MODAL DE TORNEIO (BRACKET) ---
+function abrirModalTorneio(nomeEvento, ano, participantes, fases, resultados, emAndamento) {
+  // Remove modal antigo
+  document.querySelectorAll('.modal-torneio').forEach(m => m.remove());
+  const modal = document.createElement('div');
+  modal.className = 'modal-torneio fixed inset-0 bg-black bg-opacity-80 flex items-center justify-center z-50';
+  modal.innerHTML = `<div class='bg-gray-900 text-white p-6 rounded-lg max-w-5xl w-full relative'>
+    <button id='fechar-modal-torneio' class='absolute top-2 right-2 text-2xl'>&times;</button>
+    <h2 class='text-2xl font-bold mb-4 text-center'>${nomeEvento} (${ano})</h2>
+    <div id='bracket-torneio'></div>
+    <div class='flex gap-4 mt-6 justify-center'>
+      <button id='simular-todas' class='bg-blue-600 hover:bg-blue-700 px-4 py-2 rounded'>Simular Todas</button>
+      <button id='fechar-modal-torneio2' class='bg-gray-600 hover:bg-gray-700 px-4 py-2 rounded'>Fechar</button>
+    </div>
+  </div>`;
+  document.body.appendChild(modal);
+  modal.querySelector('#fechar-modal-torneio').onclick = () => modal.remove();
+  modal.querySelector('#fechar-modal-torneio2').onclick = () => modal.remove();
+  renderBracketTorneio(nomeEvento, ano, participantes, fases, resultados, emAndamento);
+}
+
+function renderBracketTorneio(nomeEvento, ano, participantes, fases, resultados, emAndamento) {
+  const bracket = document.getElementById('bracket-torneio');
+  if (!bracket) return;
+  // Renderiza as fases (quartas, semi, final)
+  let html = `<div class='flex gap-8 justify-center overflow-x-auto'>`;
+  const faseNomes = ['Quartas', 'Semifinal', 'Final'];
+  for (let f = 0; f < fases.length; f++) {
+    html += `<div><div class='font-bold mb-2 text-center'>${faseNomes[f] || 'Fase'}</div>`;
+    for (let i = 0; i < fases[f].length; i += 2) {
+      const t1 = fases[f][i];
+      const t2 = fases[f][i+1];
+      const res = resultados[f] && resultados[f][Math.floor(i/2)];
+      html += `<div class='mb-6 flex flex-col items-center'>`;
+      html += `<div class='flex flex-col gap-1'>`;
+      html += `<div class='flex items-center gap-2'>
+        <span class='font-semibold'>${t1 || '-'}</span>
+        <span class='text-gray-400'>vs</span>
+        <span class='font-semibold'>${t2 || '-'}</span>
+      </div>`;
+      if (res && res.placarMD3) {
+        html += `<div class='mt-1 text-sm'>${res.placarMD3} <button class='ml-2 underline text-blue-300' onclick='mostrarStatsPartidaTorneio(${f},${Math.floor(i/2)})'>Match Stats</button></div>`;
+      } else if (t1 && t2 && emAndamento) {
+        html += `<button class='mt-2 bg-green-600 hover:bg-green-700 px-3 py-1 rounded text-xs' onclick='simularPartidaTorneio("${nomeEvento}",${ano},${f},${Math.floor(i/2)})'>Simular</button>`;
+      }
+      html += `</div></div>`;
+    }
+    html += `</div>`;
+  }
+  html += `</div>`;
+  bracket.innerHTML = html;
+}
+
+// Estado temporário do torneio (em memória)
+let torneioTemp = null;
+
+// Inicia torneio e abre modal
+function iniciarTorneio(nomeEvento) {
+  const ano = (new Date()).getFullYear();
+  const userTeam = localStorage.getItem('timeSelecionado') || 'Seu Time';
+  // Garante os 10 principais times sempre presentes
+  const TIMES_PRINCIPAIS = [
+    'Vitality', 'Spirit', 'The MongolZ', 'MOUZ', 'FURIA',
+    'Aurora', 'Natus Vincere', 'Falcons', 'Faze', 'Pain'
+  ];
+  let participantes = TIMES_PRINCIPAIS.slice();
+  // Se o time do usuário não está, substitui o primeiro
+  if (!participantes.includes(userTeam)) participantes[0] = userTeam;
+  // Embaralha
+  participantes = participantes.sort(() => Math.random() - 0.5);
+  // Monta fases: quartas, semi, final
+  let fases = [];
+  fases[0] = participantes;
+  fases[1] = [null,null,null,null,null];
+  fases[2] = [null,null,null];
+  fases[3] = [null,null];
+  fases[4] = [null];
+  let resultados = [[],[],[],[],[]];
+  torneioTemp = { nomeEvento, ano, participantes, fases, resultados, emAndamento: true, colocacoes: [] };
+  abrirModalTorneio(nomeEvento, ano, participantes, fases, resultados, true);
+}
+
+// Simula uma partida MD3 e avança o torneio
+function simularPartidaTorneio(nomeEvento, ano, faseIdx, jogoIdx) {
+  if (!torneioTemp) return;
+  const t1 = torneioTemp.fases[faseIdx][jogoIdx*2];
+  const t2 = torneioTemp.fases[faseIdx][jogoIdx*2+1];
+  if (!t1 || !t2) return;
+  // Simula MD3
+  let v1 = 0, v2 = 0, mapas = [];
+  for (let m = 1; m <= 3; m++) {
+    let r1 = t1 === (localStorage.getItem('timeSelecionado')||'Seu Time') ? calcularRatingTime() : ratingTimeIA(t1, JSON.parse(localStorage.getItem('mercado')||'[]'));
+    let r2 = t2 === (localStorage.getItem('timeSelecionado')||'Seu Time') ? calcularRatingTime() : ratingTimeIA(t2, JSON.parse(localStorage.getItem('mercado')||'[]'));
+    r1 += Math.random()*5-2.5;
+    r2 += Math.random()*5-2.5;
+    let rounds1 = 0, rounds2 = 0;
+    if (r1 === r2) { rounds1 = 13; rounds2 = 13; } else if (r1 > r2) { rounds1 = 13; rounds2 = Math.max(3, Math.min(11, Math.round(7 + Math.random()*4))); } else { rounds2 = 13; rounds1 = Math.max(3, Math.min(11, Math.round(7 + Math.random()*4))); }
+    let overtime = false;
+    if (rounds1 === 13 && rounds2 === 13) {
+      overtime = true;
+      let ot1 = 0, ot2 = 0;
+      do { ot1 += Math.floor(Math.random()*4)+1; ot2 += Math.floor(Math.random()*4)+1; } while (Math.abs(ot1-ot2) < 4);
+      if (ot1 > ot2) { rounds1 += ot1; rounds2 += ot2; } else { rounds2 += ot2; rounds1 += ot1; }
+    }
+    if (rounds1 > rounds2) v1++; else v2++;
+    mapas.push({ mapa: m, placar: overtime ? `${rounds1}x${rounds2} (OT)` : `${rounds1}x${rounds2}`, stats: gerarStatsPartidaMD3Aprimorado(t1, t2, rounds1, rounds2) });
+    if (v1 === 2 || v2 === 2) break;
+  }
+  let placarMD3 = `${v1}x${v2}`;
+  torneioTemp.resultados[faseIdx][jogoIdx] = { t1, t2, placarMD3, mapas };
+  // Avança para próxima fase
+  const vencedor = v1 > v2 ? t1 : t2;
+  if (torneioTemp.fases[faseIdx+1]) torneioTemp.fases[faseIdx+1][Math.floor(jogoIdx)] = vencedor;
+  // Salva colocação dos eliminados
+  if (!torneioTemp.colocacoes) torneioTemp.colocacoes = [];
+  const perdedor = v1 > v2 ? t2 : t1;
+  torneioTemp.colocacoes.push({ time: perdedor, fase: faseIdx });
+  // Se acabou, salva histórico e premiação
+  if (faseIdx === torneioTemp.fases.length-2) {
+    torneioTemp.emAndamento = false;
+    // Adiciona campeão e vice
+    torneioTemp.colocacoes.push({ time: vencedor, fase: torneioTemp.fases.length-1 });
+    // Premiação crescente
+    const premios = [50000, 70000, 90000, 120000, 160000, 220000, 300000, 400000, 600000, 1000000];
+    torneioTemp.colocacoes = torneioTemp.colocacoes.reverse(); // campeão primeiro
+    torneioTemp.colocacoes.forEach((col, idx) => {
+      col.premio = premios[idx] || 20000;
+      // Se for o time do usuário, adiciona ao orçamento
+      if (col.time === (localStorage.getItem('timeSelecionado')||'Seu Time')) {
+        let orc = typeof getOrcamento === 'function' ? getOrcamento() : 0;
+        if (orc) setOrcamento(orc + col.premio);
+      }
+    });
+    let hist = JSON.parse(localStorage.getItem('historicoCampeonatos') || '[]');
+    hist.push({ nome: nomeEvento, ano, campeao: vencedor, fases: torneioTemp.resultados, colocacoes: torneioTemp.colocacoes });
+    localStorage.setItem('historicoCampeonatos', JSON.stringify(hist));
+    alert('Premiação distribuída! Veja o resultado no histórico.');
+  }
+  abrirModalTorneio(nomeEvento, ano, torneioTemp.participantes, torneioTemp.fases, torneioTemp.resultados, torneioTemp.emAndamento);
+}
+
+// Simula todas as partidas restantes
+function simularTodasPartidasTorneio() {
+  if (!torneioTemp) return;
+  for (let f = 0; f < torneioTemp.fases.length-1; f++) {
+    for (let j = 0; j < torneioTemp.fases[f].length/2; j++) {
+      if (!torneioTemp.resultados[f][j]) {
+        simularPartidaTorneio(torneioTemp.nomeEvento, torneioTemp.ano, f, j);
+      }
+    }
+  }
+}
+
+// Estatísticas aprimoradas para cada partida MD3
+function gerarStatsPartidaMD3Aprimorado(t1, t2, rounds1, rounds2) {
+  // Gera 5 jogadores por time
+  function genPlayerStats(time) {
+    return Array.from({length:5}).map((_,i) => {
+      const kills = Math.floor(15 + Math.random()*15);
+      const deaths = Math.floor(10 + Math.random()*10);
+      const assists = Math.floor(3 + Math.random()*6);
+      const adr = Math.round(60 + Math.random()*60);
+      const rating = (0.8 + Math.random()*0.7).toFixed(2);
+      return { nome: `${time} Player${i+1}`, kills, deaths, assists, adr, rating };
+    });
+  }
+  const stats1 = genPlayerStats(t1);
+  const stats2 = genPlayerStats(t2);
+  // MVP é o maior rating
+  const mvp1 = stats1.reduce((a,b)=>a.rating>b.rating?a:b);
+  const mvp2 = stats2.reduce((a,b)=>a.rating>b.rating?a:b);
+  return {
+    mvp: mvp1.rating > mvp2.rating ? mvp1.nome : mvp2.nome,
+    stats1,
+    stats2,
+    rounds: [rounds1, rounds2]
+  };
+}
+
+// Mostra estatísticas da partida (aprimorado)
+function mostrarStatsPartidaTorneio(faseIdx, jogoIdx) {
+  if (!torneioTemp) return;
+  const res = torneioTemp.resultados[faseIdx][jogoIdx];
+  if (!res) return;
+  // Função para buscar logo
+  function getLogo(time) {
+    const logos = {
+      'Vitality': 'Vitality.webp',
+      'Spirit': 'Spirit.webp',
+      'The MongolZ': 'The MongolZ.webp',
+      'MOUZ': 'mouz.webp',
+      'FURIA': 'furia.webp',
+      'Aurora': 'Aurora.webp',
+      'Natus Vincere': 'natus vincere.webp',
+      'Falcons': 'Falcons.webp',
+      'Faze': 'Faze.webp',
+      'Pain': 'Pain.webp',
+    };
+    if (logos[time]) return `<img src='assets/img/team-logos/${logos[time]}' alt='' class='inline w-6 h-6 align-middle mr-1' style='vertical-align:middle;'>`;
+    return '';
+  }
+  // Função para buscar nicks reais
+  function getNicks(time) {
+    // Busca jogadores do time no mercado, ordenando por overall (ou rating) decrescente para garantir titulares
+    const mercado = JSON.parse(localStorage.getItem('mercado')||'[]');
+    let jogadores = mercado.filter(j => j.time === time);
+    // Se houver menos de 5, tenta buscar também no elenco salvo (caso do time do usuário)
+    if (jogadores.length < 5 && localStorage.getItem('elenco_'+time)) {
+      try {
+        const elenco = JSON.parse(localStorage.getItem('elenco_'+time));
+        if (Array.isArray(elenco)) {
+          // Evita duplicar nicks já presentes
+          const nicksMercado = jogadores.map(j=>j.nick);
+          elenco.forEach(j => {
+            if (j.nick && !nicksMercado.includes(j.nick)) jogadores.push(j);
+          });
+        }
+      } catch(e){}
+    }
+    // Ordena por overall/rating se existir
+    jogadores.sort((a,b)=>(b.overall||b.rating||0)-(a.overall||a.rating||0));
+    if (jogadores.length >= 5) return jogadores.slice(0,5).map(j=>j.nick);
+    // fallback para PlayerX
+    return Array.from({length:5}).map((_,i)=>`Player${i+1}`);
+  }
+  let html = `<h3 class='font-bold mb-2'>Estatísticas da Partida</h3>`;
+  res.mapas.forEach((mapa, idx) => {
+    html += `<div class='mb-4'><div class='font-bold text-base mb-1'>Mapa ${idx+1}: <span class='font-normal'>${mapa.placar}</span></div>`;
+    html += `<div class='mb-1 text-xs'>MVP: <span class='font-semibold'>${mapa.stats.mvp}</span></div>`;
+    // Bloco do time 1
+    const nicks1 = getNicks(res.t1);
+    html += `<div class='mb-2'><div class='font-bold text-yellow-400 mb-1'>${getLogo(res.t1)}${res.t1}</div>`;
+    html += `<table class='text-xs bg-gray-800 text-white w-full mb-2 rounded'><thead><tr><th class='text-left px-2'>Nick</th><th>K-D</th><th>+/-</th><th>ADR</th><th>Rating</th></tr></thead><tbody>`;
+    mapa.stats.stats1.forEach((p,i)=>{
+      const kd = `${p.kills}-${p.deaths}`;
+      const plusminus = p.kills - p.deaths;
+      const nick = nicks1[i] || `Player${i+1}`;
+      html += `<tr><td class='px-2'>${nick}</td><td>${kd}</td><td class='${plusminus>=0?'text-green-400':'text-red-400'}'>${plusminus>0?'+':''}${plusminus}</td><td>${p.adr}</td><td class='${p.rating>=1.15?'text-green-400':p.rating<=0.9?'text-red-400':''}'>${p.rating}</td></tr>`;
+    });
+    html += `</tbody></table></div>`;
+    // Bloco do time 2
+    const nicks2 = getNicks(res.t2);
+    html += `<div class='mb-2'><div class='font-bold text-red-400 mb-1'>${getLogo(res.t2)}${res.t2}</div>`;
+    html += `<table class='text-xs bg-gray-800 text-white w-full mb-2 rounded'><thead><tr><th class='text-left px-2'>Nick</th><th>K-D</th><th>+/-</th><th>ADR</th><th>Rating</th></tr></thead><tbody>`;
+    mapa.stats.stats2.forEach((p,i)=>{
+      const kd = `${p.kills}-${p.deaths}`;
+      const plusminus = p.kills - p.deaths;
+      const nick = nicks2[i] || `Player${i+1}`;
+      html += `<tr><td class='px-2'>${nick}</td><td>${kd}</td><td class='${plusminus>=0?'text-green-400':'text-red-400'}'>${plusminus>0?'+':''}${plusminus}</td><td>${p.adr}</td><td class='${p.rating>=1.15?'text-green-400':p.rating<=0.9?'text-red-400':''}'>${p.rating}</td></tr>`;
+    });
+    html += `</tbody></table></div>`;
+    html += `</div>`;
+  });
+  // Premiação se final
+  if (!torneioTemp.emAndamento && torneioTemp.colocacoes) {
+    html += `<h4 class='mt-4 font-bold'>Premiação:</h4><ul>`;
+    torneioTemp.colocacoes.forEach((col, idx) => {
+      html += `<li>${idx+1}º - ${col.time}: R$ ${col.premio.toLocaleString()}</li>`;
+    });
+    html += `</ul>`;
+  }
+  // Modal simples
+  const modal = document.createElement('div');
+  modal.className = 'fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center z-50';
+  modal.innerHTML = `<div class='bg-white text-black p-6 rounded max-w-2xl w-full'><div>${html}</div><button class='mt-4 bg-blue-600 text-white px-4 py-2 rounded' id='fechar-modal-stats'>Fechar</button></div>`;
+  document.body.appendChild(modal);
+  modal.querySelector('#fechar-modal-stats').onclick = () => modal.remove();
+}
+
+if (typeof window !== 'undefined') {
+  window.iniciarTorneio = iniciarTorneio;
+  window.simularPartidaTorneio = simularPartidaTorneio;
+  window.simularTodasPartidasTorneio = simularTodasPartidasTorneio;
+  window.mostrarStatsPartidaTorneio = mostrarStatsPartidaTorneio;
+}
 // Salva inscrições do usuário (por ano)
 function getInscricoesCampeonatos(ano) {
   const all = JSON.parse(localStorage.getItem('inscricoesCampeonatos') || '{}');
@@ -27,96 +302,8 @@ function inscreverNoCampeonato(nomeEvento) {
 
 // --- SIMULAÇÃO REAL DE CAMPEONATO ---
 function jogarCampeonato(nomeEvento) {
-  const ano = (new Date()).getFullYear();
-  // Participantes: time do usuário + times IA (pega times do mercado)
-  const userTeam = localStorage.getItem('timeSelecionado') || 'Seu Time';
-  let participantes = [userTeam];
-  // Pega times únicos do mercado
-  let mercado = JSON.parse(localStorage.getItem('mercado') || '[]');
-  let timesIA = Array.from(new Set(mercado.map(j => j.time).filter(t => t && t !== userTeam)));
-  // Limita para 8 ou 16 times (torneio eliminatório)
-  while (timesIA.length < 7) timesIA.push('Bot_' + (timesIA.length+1));
-  participantes = participantes.concat(timesIA.slice(0, 7)); // 8 times
-  // Embaralha
-  participantes = participantes.sort(() => Math.random() - 0.5);
-
-  // Simula quartas, semi, final
-  let fase = participantes;
-  let fases = [fase.slice()];
-  let resultados = [];
-  while (fase.length > 1) {
-    let prox = [];
-    let faseRes = [];
-    for (let i = 0; i < fase.length; i += 2) {
-      const t1 = fase[i];
-      const t2 = fase[i+1];
-      // Simula força: rating médio do elenco
-      let r1 = t1 === userTeam ? calcularRatingTime() : ratingTimeIA(t1, mercado);
-      let r2 = t2 === userTeam ? calcularRatingTime() : ratingTimeIA(t2, mercado);
-      // Randomização leve
-      r1 += Math.random() * 5 - 2.5;
-      r2 += Math.random() * 5 - 2.5;
-      // Simulação realista de placar CS2 (MR13, overtime se empatar)
-      let rounds1 = 0, rounds2 = 0;
-      // Tempo normal: até 13
-      if (r1 === r2) {
-        // Empate, força overtime
-        rounds1 = 13;
-        rounds2 = 13;
-      } else if (r1 > r2) {
-        rounds1 = 13;
-        // Adversário faz de 3 a 11
-        rounds2 = Math.max(3, Math.min(11, Math.round(7 + Math.random()*4)));
-      } else {
-        rounds2 = 13;
-        rounds1 = Math.max(3, Math.min(11, Math.round(7 + Math.random()*4)));
-      }
-      // Overtime
-      let overtime = false;
-      if (rounds1 === 13 && rounds2 === 13) {
-        overtime = true;
-        let ot1 = 0, ot2 = 0;
-        // Overtime: ganha quem abrir 4 de diferença após 3x3, repete se empatar
-        do {
-          ot1 += Math.floor(Math.random()*4)+1;
-          ot2 += Math.floor(Math.random()*4)+1;
-        } while (Math.abs(ot1-ot2) < 4);
-        if (ot1 > ot2) {
-          rounds1 += ot1;
-          rounds2 += ot2;
-        } else {
-          rounds2 += ot2;
-          rounds1 += ot1;
-        }
-      }
-      let vencedor;
-      if (rounds1 > rounds2) vencedor = t1;
-      else vencedor = t2;
-      let placar = overtime ? `${rounds1}x${rounds2} (OT)` : `${rounds1}x${rounds2}`;
-      prox.push(vencedor);
-      faseRes.push({ t1, t2, vencedor, placar });
-    }
-    resultados.push(faseRes);
-    fase = prox;
-    fases.push(fase.slice());
-  }
-  const campeao = fase[0];
-
-  // Salva histórico
-  let hist = JSON.parse(localStorage.getItem('historicoCampeonatos') || '[]');
-  hist.push({ nome: nomeEvento, ano, campeao, fases: resultados });
-  localStorage.setItem('historicoCampeonatos', JSON.stringify(hist));
-
-  // Mostra resultado ao usuário
-  let msg = `Simulação de ${nomeEvento} (${ano})\n`;
-  resultados.forEach((fase, idx) => {
-    msg += `\n${['Quartas','Semifinal','Final'][idx] || 'Fase'}:`;
-    fase.forEach(jogo => {
-      msg += `\n${jogo.t1} ${jogo.placar} ${jogo.t2}  →  Vencedor: ${jogo.vencedor}`;
-    });
-  });
-  msg += `\n\nCampeão: ${campeao}`;
-  alert(msg);
+  // Inicia o bracket visual/manual
+  iniciarTorneio(nomeEvento);
 }
 
 // Calcula rating médio de um time IA
