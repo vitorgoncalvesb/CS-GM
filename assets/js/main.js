@@ -44,8 +44,15 @@ if (configForm) {
 
 // --- Função para resetar todos os dados (localStorage) ---
 function resetarDados() {
-  localStorage.clear();
-  location.reload();
+  if (confirm("Tem certeza que deseja resetar todos os dados? Isso apagará apenas a carreira ativa, mas não suas carreiras salvas.")) {
+    // Limpa apenas a carreira ativa, não as carreiras salvas
+    localStorage.removeItem("carreiraAtiva");
+    localStorage.removeItem("timeSelecionado");
+    localStorage.removeItem("elenco");
+    localStorage.removeItem("mercado");
+    // Adicione aqui outras chaves específicas da carreira ativa, se necessário
+    location.reload();
+  }
 }
 
 // --- PESOS DOS ATRIBUTOS ---
@@ -366,9 +373,235 @@ const JOGADORES_POR_TIME = {
 };
 
 
-// --- MODAL DE SELEÇÃO DE TIME ---
+// --- SISTEMA DE MÚLTIPLAS CARREIRAS ---
+function getCarreiras() {
+  return JSON.parse(localStorage.getItem("carreiras") || "[]");
+}
+function setCarreiras(carreiras) {
+  localStorage.setItem("carreiras", JSON.stringify(carreiras));
+}
+function salvarCarreiraAtual(nome) {
+  // Salva o progresso atual sob o nome fornecido
+  const save = {};
+  for (let i = 0; i < localStorage.length; i++) {
+    const k = localStorage.key(i);
+    if (k === "carreiras") continue;
+    try {
+      save[k] = JSON.parse(localStorage.getItem(k));
+    } catch {
+      save[k] = localStorage.getItem(k);
+    }
+  }
+  let carreiras = getCarreiras();
+  const idx = carreiras.findIndex(c => c.nome === nome);
+  if (idx >= 0) {
+    carreiras[idx].save = save;
+    carreiras[idx].lastPlayed = Date.now();
+  } else {
+    carreiras.push({ nome, save, lastPlayed: Date.now() });
+  }
+  setCarreiras(carreiras);
+}
+function carregarCarreira(nome) {
+  const carreiras = getCarreiras();
+  const carreira = carreiras.find(c => c.nome === nome);
+  if (!carreira) return false;
+  // Limpa localStorage (exceto carreiras)
+  Object.keys(localStorage).forEach(k => { if (k !== "carreiras") localStorage.removeItem(k); });
+  // Restaura save
+  Object.keys(carreira.save).forEach(k => localStorage.setItem(k, JSON.stringify(carreira.save[k])));
+  localStorage.setItem("carreiraAtiva", nome);
+  location.reload();
+  return true;
+}
+function getCarreiraAtiva() {
+  return localStorage.getItem("carreiraAtiva") || "";
+}
+
+// --- MODAL INICIAL COM MÚLTIPLAS CARREIRAS ---
+function mostrarModalInicial() {
+  if (document.getElementById("modal-overlay-inicio")) return;
+  const overlay = document.createElement("div");
+  overlay.id = "modal-overlay-inicio";
+  overlay.style.position = "fixed";
+  overlay.style.top = 0;
+  overlay.style.left = 0;
+  overlay.style.width = "100vw";
+  overlay.style.height = "100vh";
+  overlay.style.background = "rgba(0,0,0,0.85)";
+  overlay.style.display = "flex";
+  overlay.style.alignItems = "center";
+  overlay.style.justifyContent = "center";
+  overlay.style.zIndex = 10000;
+
+  const modal = document.createElement("div");
+  modal.style.background = "#fff";
+  modal.style.padding = "40px 32px";
+  modal.style.borderRadius = "16px";
+  modal.style.boxShadow = "0 4px 32px rgba(0,0,0,0.25)";
+  modal.style.textAlign = "center";
+  modal.style.minWidth = "340px";
+  modal.innerHTML = `
+    <h2 class="font-bold text-2xl mb-6">Bem-vindo ao Counter Strike GM</h2>
+    <p class="mb-4 text-gray-700">Escolha uma opção para começar sua jornada:</p>
+    <div class="flex flex-col gap-4 mb-4">
+      <button id="btn-nova-carreira" class="bg-blue-600 text-white py-3 px-6 rounded font-semibold hover:bg-blue-700 transition">Nova Carreira</button>
+      <button id="btn-carregar-carreira" class="bg-green-600 text-white py-3 px-6 rounded font-semibold hover:bg-green-700 transition">Carregar Carreira</button>
+      <input type="file" id="input-carregar-save" accept=".json" class="hidden" />
+    </div>
+    <div class="mt-2 mb-2 flex flex-col gap-2">
+      <button id="btn-salvar-carreira" class="bg-yellow-400 text-gray-800 py-2 px-4 rounded font-semibold hover:bg-yellow-500 transition">Salvar carreira ativa</button>
+      <button id="btn-exportar-carreira" class="bg-gray-200 text-gray-700 py-2 px-4 rounded font-semibold hover:bg-gray-300 transition">Exportar Carreira Atual</button>
+    </div>
+    <div id="lista-carreiras" class="mt-6"></div>
+  `;
+  overlay.appendChild(modal);
+  document.body.appendChild(overlay);
+
+  // Nova carreira
+  modal.querySelector("#btn-nova-carreira").onclick = () => {
+    // Pergunta nome da carreira
+    let nome = prompt("Digite um nome para sua nova carreira:");
+    if (!nome) return;
+    nome = nome.trim();
+    if (!nome) return;
+    let carreiras = getCarreiras();
+    if (carreiras.some(c => c.nome === nome)) {
+      alert("Já existe uma carreira com esse nome.");
+      return;
+    }
+    // Limpa localStorage (exceto carreiras)
+    Object.keys(localStorage).forEach(k => { if (k !== "carreiras") localStorage.removeItem(k); });
+    localStorage.setItem("carreiraAtiva", nome);
+    document.body.removeChild(overlay);
+    mostrarModalSelecaoTime();
+  };
+
+  // Carregar carreira: mostra/oculta a lista de carreiras
+  modal.querySelector("#btn-carregar-carreira").onclick = () => {
+    const lista = modal.querySelector("#lista-carreiras");
+    if (lista.style.display === "block") {
+      lista.style.display = "none";
+    } else {
+      renderListaCarreiras(lista);
+      lista.style.display = "block";
+    }
+  };
+
+  // Salvar carreira ativa manualmente
+  modal.querySelector("#btn-salvar-carreira").onclick = () => {
+    const nome = getCarreiraAtiva();
+    if (!nome) {
+      alert("Nenhuma carreira ativa para salvar.");
+      return;
+    }
+    salvarCarreiraAtual(nome);
+    alert("Carreira salva com sucesso!");
+    renderListaCarreiras(modal.querySelector("#lista-carreiras"));
+  };
+
+  // Importar save externo
+  modal.querySelector("#input-carregar-save").onchange = function (e) {
+    const file = e.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = function (evt) {
+      try {
+        const data = JSON.parse(evt.target.result);
+        if (!data.nome || !data.save) throw "Save inválido";
+        let carreiras = getCarreiras();
+        if (carreiras.some(c => c.nome === data.nome)) {
+          if (!confirm("Já existe uma carreira com esse nome. Sobrescrever?")) return;
+          carreiras = carreiras.filter(c => c.nome !== data.nome);
+        }
+        carreiras.push({ nome: data.nome, save: data.save, lastPlayed: Date.now() });
+        setCarreiras(carreiras);
+        alert("Carreira importada com sucesso!");
+        renderListaCarreiras(modal.querySelector("#lista-carreiras"));
+      } catch {
+        alert("Arquivo de save inválido.");
+      }
+    };
+    reader.readAsText(file);
+  };
+
+  // Exportar carreira ativa
+  modal.querySelector("#btn-exportar-carreira").onclick = () => {
+    const nome = getCarreiraAtiva();
+    if (!nome) {
+      alert("Nenhuma carreira ativa para exportar.");
+      return;
+    }
+    salvarCarreiraAtual(nome);
+    const carreiras = getCarreiras();
+    const carreira = carreiras.find(c => c.nome === nome);
+    if (!carreira) {
+      alert("Carreira não encontrada.");
+      return;
+    }
+    const blob = new Blob([JSON.stringify({ nome: carreira.nome, save: carreira.save }, null, 2)], {type: "application/json"});
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(blob);
+    a.download = `cs-gm-save-${carreira.nome}.json`;
+    a.click();
+  };
+
+  // Lista de carreiras salvas (inicialmente oculta)
+  const listaCarreiras = modal.querySelector("#lista-carreiras");
+  listaCarreiras.style.display = "none";
+}
+
+// Renderiza lista de carreiras salvas
+function renderListaCarreiras(container) {
+  let carreiras = getCarreiras();
+  if (!carreiras.length) {
+    container.innerHTML = "<div class='text-gray-500 text-sm'>Nenhuma carreira salva.</div>";
+    return;
+  }
+  container.innerHTML = "<div class='font-semibold mb-2'>Carreiras salvas:</div>";
+  carreiras
+    .sort((a, b) => (b.lastPlayed || 0) - (a.lastPlayed || 0))
+    .forEach(c => {
+      const div = document.createElement("div");
+      div.className = "flex items-center justify-between bg-gray-100 rounded px-3 py-2 mb-2";
+      div.innerHTML = `
+        <span>${c.nome}${c.nome === getCarreiraAtiva() ? " <span class='text-xs text-blue-600'>(ativa)</span>" : ""}</span>
+        <div>
+          <button class="bg-blue-500 text-white px-2 py-1 rounded text-xs mr-2 hover:bg-blue-600" title="Jogar" data-jogar="${c.nome}">Jogar</button>
+          <button class="bg-red-500 text-white px-2 py-1 rounded text-xs hover:bg-red-600" title="Excluir" data-excluir="${c.nome}">Excluir</button>
+        </div>
+      `;
+      container.appendChild(div);
+    });
+  // Eventos dos botões
+  container.querySelectorAll("[data-jogar]").forEach(btn => {
+    btn.onclick = () => {
+      // Salva a carreira ativa antes de trocar
+      const ativa = getCarreiraAtiva();
+      if (ativa) salvarCarreiraAtual(ativa);
+      carregarCarreira(btn.getAttribute("data-jogar"));
+    };
+  });
+  container.querySelectorAll("[data-excluir]").forEach(btn => {
+    btn.onclick = () => {
+      if (!confirm("Deseja realmente excluir esta carreira?")) return;
+      let carreiras = getCarreiras().filter(c => c.nome !== btn.getAttribute("data-excluir"));
+      setCarreiras(carreiras);
+      // Se excluiu a ativa, limpa do localStorage
+      if (btn.getAttribute("data-excluir") === getCarreiraAtiva()) {
+        localStorage.removeItem("carreiraAtiva");
+        localStorage.removeItem("timeSelecionado");
+        localStorage.removeItem("elenco");
+        localStorage.removeItem("mercado");
+      }
+      renderListaCarreiras(container);
+    };
+  });
+}
+
+// --- Ao criar time, salva carreira automaticamente ---
 function mostrarModalSelecaoTime() {
-  // Cria overlay
+  if (document.getElementById("modal-overlay-time")) return;
   const overlay = document.createElement("div");
   overlay.id = "modal-overlay-time";
   overlay.style.position = "fixed";
@@ -376,42 +609,81 @@ function mostrarModalSelecaoTime() {
   overlay.style.left = 0;
   overlay.style.width = "100vw";
   overlay.style.height = "100vh";
-  overlay.style.background = "rgba(0,0,0,0.7)";
+  overlay.style.background = "rgba(0,0,0,0.8)";
   overlay.style.display = "flex";
   overlay.style.alignItems = "center";
   overlay.style.justifyContent = "center";
-  overlay.style.zIndex = 9999;
+  overlay.style.zIndex = 10001;
 
-  // Cria modal
   const modal = document.createElement("div");
   modal.style.background = "#fff";
-  modal.style.padding = "32px";
-  modal.style.borderRadius = "12px";
-  modal.style.boxShadow = "0 2px 16px rgba(0,0,0,0.2)";
+  modal.style.padding = "36px 28px";
+  modal.style.borderRadius = "16px";
+  modal.style.boxShadow = "0 4px 32px rgba(0,0,0,0.25)";
   modal.style.textAlign = "center";
-  modal.innerHTML = `<h2>Escolha seu time</h2>
-    <div id="lista-times" style="display: flex; flex-wrap: wrap; gap: 12px; justify-content: center; margin-top: 18px;"></div>`;
+  modal.style.minWidth = "340px";
+  modal.innerHTML = `<h2 class="font-bold text-xl mb-4">Escolha seu time inicial</h2>
+    <div id="lista-times" style="display: flex; flex-wrap: wrap; gap: 18px; justify-content: center; margin-top: 18px;"></div>
+    <button id="btn-cancelar-time" class="mt-8 bg-gray-200 text-gray-700 py-2 px-4 rounded font-semibold hover:bg-gray-300 transition">Cancelar</button>
+  `;
 
   overlay.appendChild(modal);
   document.body.appendChild(overlay);
 
-  // Adiciona botões dos times
+  // Adiciona botões dos times com logo e descrição
   const lista = modal.querySelector("#lista-times");
   TIMES_DISPONIVEIS.forEach((time) => {
     const btn = document.createElement("button");
-    btn.textContent = time;
-    btn.style.padding = "10px 18px";
-    btn.style.margin = "4px";
-    btn.style.borderRadius = "8px";
-    btn.style.border = "1px solid #ccc";
-    btn.style.background = "#f3f3f3";
+    btn.style.display = "flex";
+    btn.style.flexDirection = "column";
+    btn.style.alignItems = "center";
+    btn.style.justifyContent = "center";
+    btn.style.width = "120px";
+    btn.style.height = "120px";
+    btn.style.padding = "10px";
+    btn.style.borderRadius = "10px";
+    btn.style.border = "2px solid #e5e7eb";
+    btn.style.background = "#f9fafb";
     btn.style.cursor = "pointer";
+    btn.style.transition = "all 0.2s";
     btn.onmouseover = () => (btn.style.background = "#e0e7ff");
-    btn.onmouseout = () => (btn.style.background = "#f3f3f3");
+    btn.onmouseout = () => (btn.style.background = "#f9fafb");
+
+    // Logo fictício (adicione imagens reais se quiser)
+    const logo = document.createElement("div");
+    logo.style.width = "48px";
+    logo.style.height = "48px";
+    logo.style.background = "#dbeafe";
+    logo.style.borderRadius = "50%";
+    logo.style.display = "flex";
+    logo.style.alignItems = "center";
+    logo.style.justifyContent = "center";
+    logo.style.fontWeight = "bold";
+    logo.style.fontSize = "1.2rem";
+    logo.style.marginBottom = "8px";
+    logo.textContent = time[0];
+
+    // Nome do time
+    const nome = document.createElement("span");
+    nome.textContent = time;
+    nome.style.fontWeight = "bold";
+    nome.style.fontSize = "1rem";
+    nome.style.marginBottom = "2px";
+
+    // Descrição curta
+    const desc = document.createElement("span");
+    desc.textContent = `Elenco: ${JOGADORES_POR_TIME[time]?.length || 0} jogadores`;
+    desc.style.fontSize = "0.85rem";
+    desc.style.color = "#6b7280";
+
+    btn.appendChild(logo);
+    btn.appendChild(nome);
+    btn.appendChild(desc);
+
     btn.onclick = () => {
       localStorage.setItem("timeSelecionado", time);
 
-      // Define elenco inicial do time escolhido com rating realista
+      // Define elenco inicial do time escolhido com rating realista e consistente
       let elenco = (JOGADORES_POR_TIME[time] || []).map(j => {
         let rating = calcularRating(j);
         return { ...j, rating };
@@ -424,20 +696,84 @@ function mostrarModalSelecaoTime() {
       );
       localStorage.setItem("mercado", JSON.stringify(mercado));
 
+      // Salva carreira automaticamente
+      const nomeCarreira = getCarreiraAtiva();
+      if (nomeCarreira) salvarCarreiraAtual(nomeCarreira);
+
       document.body.removeChild(overlay);
       location.reload();
     };
     lista.appendChild(btn);
   });
+
+  // Cancelar
+  modal.querySelector("#btn-cancelar-time").onclick = () => {
+    document.body.removeChild(overlay);
+    mostrarModalInicial();
+  };
 }
 
-// --- CHECA SE PRECISA SELECIONAR TIME ---
+window.mostrarModalSelecaoTime = mostrarModalSelecaoTime;
+window.mostrarModalInicial = mostrarModalInicial;
+
+// --- CHECA SE PRECISA SELECIONAR TIME OU MOSTRAR MODAL INICIAL ---
 function checarSelecaoTime() {
-  if (!localStorage.getItem("timeSelecionado")) {
-    mostrarModalSelecaoTime();
-    return false;
+  const isIndex =
+    window.location.pathname.endsWith("index.html") ||
+    window.location.pathname === "/" ||
+    window.location.pathname === "\\";
+
+  // Se veio de saves.html para criar nova carreira, força seleção de time
+  if (window.location.search.includes("newcareer=1")) {
+    setTimeout(() => {
+      mostrarModalSelecaoTime();
+      // Remove o parâmetro da URL para evitar repetição
+      if (window.history.replaceState) {
+        window.history.replaceState({}, document.title, window.location.pathname);
+      }
+    }, 100);
+    return true;
   }
+
+  // Se não há carreira ativa, redireciona para saves.html e impede execução
+  if (!localStorage.getItem("carreiraAtiva") || !localStorage.getItem("timeSelecionado")) {
+    if (!window.location.pathname.endsWith("saves.html")) {
+      window.location.replace("saves.html");
+      return false;
+    }
+  }
+
+  // Na index.html, mostra modal inicial se não houver time selecionado
+  if (isIndex) {
+    if (!localStorage.getItem("timeSelecionado")) {
+      setTimeout(() => mostrarModalInicial(), 100);
+    }
+    return true;
+  }
+
   return true;
 }
 
+function exportarDados() {
+  modal.querySelector("#btn-salvar-config-carreira").onclick = () => {
+    const lista = modal.querySelector("#lista-carreiras");
+    if (lista.style.display === "block") {
+      lista.style.display = "none";
+    } else {
+      renderListaCarreiras(lista);
+      lista.style.display = "block";
+    }
+  };
 
+  // Salvar carreira ativa manualmente 
+  modal.querySelector("#btn-salvar-config-carreira").onclick = () => {
+    const nome = getCarreiraAtiva();
+    if (!nome) {
+      alert("Nenhuma carreira ativa para salvar.");
+      return;
+    }
+    salvarCarreiraAtual(nome);
+    alert("Carreira salva com sucesso!");
+    renderListaCarreiras(modal.querySelector("#lista-carreiras"));
+  };
+}
