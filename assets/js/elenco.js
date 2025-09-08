@@ -109,14 +109,9 @@ function renderElenco() {
         const sinal = evo.diff > 0 ? "+" : "";
         diffHtml = ` <span class="${cor} text-xs">(${sinal}${evo.diff})</span>`;
       }
-      // Potencial diff
-      if (evo && typeof evo.diffPot === "number") {
-        const corPot =
-          evo.diffPot > 0
-            ? "text-green-600"
-            : evo.diffPot < 0
-            ? "text-red-600"
-            : "text-gray-400";
+      // Potencial diff: só mostra se diferente de zero
+      if (evo && typeof evo.diffPot === "number" && evo.diffPot !== 0) {
+        const corPot = evo.diffPot > 0 ? "text-green-600" : "text-red-600";
         const sinalPot = evo.diffPot > 0 ? "+" : "";
         diffPotHtml = ` <span class="${corPot} text-xs">(${sinalPot}${evo.diffPot})</span>`;
       }
@@ -132,14 +127,7 @@ function renderElenco() {
   <span title="Rating" class="text-blue-600 font-medium tooltip">${
     jogador.rating
   }${diffHtml}</span>
-  <span title="Potencial" class="text-green-700 font-medium ml-1">(Pot: ${
-    Array.isArray(jogador.evolucaoAnual) &&
-    jogador.evolucaoAnual.length &&
-    typeof jogador.evolucaoAnual[jogador.evolucaoAnual.length - 1].potencial !==
-      "undefined"
-      ? jogador.evolucaoAnual[jogador.evolucaoAnual.length - 1].potencial
-      : jogador.potencial || "?"
-  }${diffPotHtml})</span>
+  <span title="Potencial" class="text-green-700 font-medium ml-1">(Pot: ${typeof jogador.potencial === 'number' ? jogador.potencial : (Array.isArray(jogador.evolucaoAnual) && jogador.evolucaoAnual.length && typeof jogador.evolucaoAnual[jogador.evolucaoAnual.length - 1].potencial !== 'undefined' ? jogador.evolucaoAnual[jogador.evolucaoAnual.length - 1].potencial : '?')}${diffPotHtml})</span>
         <div title="Função" class="tooltip">(${
           jogador.funcao
         })</div>- <div title="Idade" class="tooltip">${

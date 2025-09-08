@@ -346,7 +346,7 @@ function evoluirJogadoresAnoNovo() {
     }
     // Salva rating e potencial anteriores
     const ratingAnterior = jogador.rating;
-    const potencialAnterior = jogador.potencial;
+    const potencialAnterior = typeof jogador.potencial === 'number' ? jogador.potencial : null;
     // Evolução baseada no potencial
     let novoRating = jogador.rating;
     if (jogador.potencial && jogador.rating < jogador.potencial) {
@@ -367,7 +367,10 @@ function evoluirJogadoresAnoNovo() {
     if (novoRating > jogador.potencial) novoRating = jogador.potencial;
     // Calcula diferença
     const diff = novoRating - ratingAnterior;
-    const diffPot = jogador.potencial - potencialAnterior;
+    let diffPot = null;
+    if (potencialAnterior !== null && typeof jogador.potencial === 'number') {
+      diffPot = jogador.potencial - potencialAnterior;
+    }
     jogador.rating = novoRating;
     jogador.evolucaoAnual.push({
       ano: getDataJogo().getFullYear(),
@@ -390,7 +393,7 @@ function evoluirJogadoresAnoNovo() {
       jogador.potencial = Math.max(40, jogador.potencial - decaimento);
     }
     const ratingAnterior = jogador.rating;
-    const potencialAnterior = jogador.potencial;
+    const potencialAnterior = typeof jogador.potencial === 'number' ? jogador.potencial : null;
     let novoRating = jogador.rating;
     if (jogador.potencial && jogador.rating < jogador.potencial) {
       let ganho = Math.floor(Math.random() * 3) + 1;
@@ -404,7 +407,10 @@ function evoluirJogadoresAnoNovo() {
     }
     if (novoRating > jogador.potencial) novoRating = jogador.potencial;
     const diff = novoRating - ratingAnterior;
-    const diffPot = jogador.potencial - potencialAnterior;
+    let diffPot = null;
+    if (potencialAnterior !== null && typeof jogador.potencial === 'number') {
+      diffPot = jogador.potencial - potencialAnterior;
+    }
     jogador.rating = novoRating;
     jogador.evolucaoAnual.push({
       ano: getDataJogo().getFullYear(),
