@@ -1,0 +1,213 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Times e Elencos - Counter Strike GM</title>
+    <link
+      href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css"
+      rel="stylesheet"
+    />
+    <link
+      rel="shortcut icon"
+      href="assets/img/favicon/favicon.jpg"
+      type="image/x-icon"
+    />
+  </head>
+  <body class="bg-gray-100 text-gray-800 min-h-screen">
+    <header
+      class="bg-white border-b border-gray-300 p-4 flex justify-between items-center"
+    >
+      <a href="saves.html" class="text-2xl font-bold">Counter Strike GM</a>
+      <nav class="space-x-4 text-sm">
+        <a href="index.html" class="hover:underline">Home</a>
+        <a href="elenco.html" class="hover:underline">Elenco</a>
+        <a href="mercado.html" class="hover:underline">Mercado</a>
+        <a href="simulacao.html" class="hover:underline">Simulação</a>
+        <a href="calendario.html" class="hover:underline">Calendário</a>
+        <a href="elencos.html" class="text-blue-600 font-semibold">Times</a>
+        <a href="estatisticas.html" class="hover:underline">Estatísticas</a>
+        <a href="financas.html" class="hover:underline">Finanças</a>
+        <a href="configuracoes.html" class="hover:underline">Configurações</a>
+      </nav>
+    </header>
+    <main class="max-w-4xl mx-auto mt-10">
+      <h1 class="text-2xl font-bold mb-6">Times e Elencos</h1>
+      <div id="tabela-times"></div>
+    </main>
+    <script src="assets/js/main.js"></script>
+    <script src="assets/js/mercado.js"></script>
+    <script>
+      // --- Lista padrão de times ---
+      const DEFAULT_TIMES = [
+        "Vitality",
+        "Spirit",
+        "The MongolZ",
+        "MOUZ",
+        "FURIA",
+        "Aurora",
+        "Natus Vincere",
+        "Falcons",
+        "Faze",
+        "Pain",
+      ];
+
+      // Função utilitária para calcular rating (igual ao main.js)
+      function calcularRating(jogador) {
+        if (!jogador || !jogador.funcao) return 0;
+        const pesos = {
+          AWPer: {
+            mira: 0.25,
+            clutch: 0.25,
+            suporte: 0.1,
+            hs: 0.2,
+            movimentacao: 0.15,
+            agressividade: 0.15,
+          },
+          Rifler: {
+            mira: 0.2,
+            clutch: 0.15,
+            suporte: 0.3,
+            hs: 0.2,
+            movimentacao: 0.15,
+            agressividade: 0.2,
+          },
+          IGL: {
+            mira: 0.2,
+            clutch: 0.2,
+            suporte: 0.25,
+            hs: 0.15,
+            movimentacao: 0.1,
+            agressividade: 0.1,
+          },
+        };
+        const p = pesos[jogador.funcao] || pesos.Rifler;
+        let rating = 0;
+        for (let key in p) {
+          rating += (jogador[key] || 0) * p[key];
+        }
+        return Math.round(rating);
+      }
+
+      // --- Função para renderizar a tabela de times ---
+      function renderTabelaTimes() {
+        const container = document.getElementById("tabela-times");
+        container.innerHTML = "";
+
+        // Usa TIMES_DISPONIVEIS global se existir, caso contrário usa DEFAULT_TIMES
+        let times =
+          window.TIMES_DISPONIVEIS && Array.isArray(window.TIMES_DISPONIVEIS)
+            ? window.TIMES_DISPONIVEIS
+            : DEFAULT_TIMES;
+
+        // Pega o time do usuário
+        const timeUsuario = localStorage.getItem("timeSelecionado");
+
+        // Carrega jogadores do mercado (jogadores transferidos)
+        let mercado = [];
+        if (
+          typeof jogadoresMercado !== "undefined" &&
+          Array.isArray(jogadoresMercado)
+        ) {
+          mercado = jogadoresMercado;
+        } else {
+          try {
+            mercado = JSON.parse(localStorage.getItem("mercado") || "[]");
+          } catch {
+            mercado = [];
+          }
+        }
+
+        // Pega JOGADORES_POR_TIME global se existir
+        const JOGADORES_POR_TIME = window.JOGADORES_POR_TIME || {};
+
+        // Para cada time, monta o elenco correto
+        times.forEach((time) => {
+          let elenco = [];
+          if (time === timeUsuario) {
+            // Elenco do usuário: sempre do localStorage
+            try {
+              elenco = JSON.parse(localStorage.getItem("elenco") || "[]");
+            } catch {
+              elenco = [];
+            }
+          } else {
+            // Elenco da IA: jogadores transferidos para o time (do mercado), senão JOGADORES_POR_TIME
+            elenco = mercado.filter((j) => j.time === time);
+            // Se não houver jogadores transferidos, usa o elenco base do time
+            if ((!elenco || elenco.length === 0) && JOGADORES_POR_TIME[time]) {
+              elenco = JOGADORES_POR_TIME[time].map((j) => ({
+                ...j,
+                rating:
+                  typeof j.rating !== "undefined"
+                    ? j.rating
+                    : calcularRating(j),
+              }));
+            }
+          }
+
+          // Só exibe o time se houver elenco (pode remover esta linha se quiser mostrar todos os times)
+          // if (!elenco || elenco.length === 0) return;
+
+          container.innerHTML += `
+            <div class="bg-white rounded shadow mb-6 p-4">
+              <div class="flex items-center gap-3 mb-2">
+                <div class="w-10 h-10 rounded-full bg-gray-600 flex items-center justify-center">
+                  <img src="assets/img/team-logos/${time}.webp"
+                  alt="${time} logo" 
+                  class="w-8 h-8 border-gray-300 object-cover"
+                  ">
+                </div>
+                <span class="text-xl font-semibold">${time}</span>
+                <span class="ml-2 text-sm text-gray-500">
+                  ${elenco.length} jogadores
+                </span>
+              </div>
+              <div class="overflow-x-auto">
+                <table class="min-w-full text-sm">
+                  <thead>
+                    <tr class="border-b">
+                      <th class="py-1 px-2 text-left">Nome</th>
+                      <th class="py-1 px-2 text-left">Função</th>
+                      <th class="py-1 px-2 text-left">Rating</th>
+                      <th class="py-1 px-2 text-left">Salário</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    ${elenco
+                      .map(
+                        (j) => `
+                      <tr>
+                        <td class="py-1 px-2">${j.nome}</td>
+                        <td class="py-1 px-2">${j.funcao}</td>
+                        <td class="py-1 px-2">${
+                          typeof j.rating !== "undefined"
+                            ? j.rating
+                            : calcularRating(j)
+                        }</td>
+                        <td class="py-1 px-2">
+                          ${
+                            j.salario
+                              ? "$" + j.salario.toLocaleString()
+                              : j.preco
+                              ? "$" + j.preco.toLocaleString()
+                              : "-"
+                          }
+                        </td>
+                      </tr>
+                    `
+                      )
+                      .join("")}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          `;
+        });
+      }
+
+      // Inicializa quando a página carregar
+      document.addEventListener("DOMContentLoaded", renderTabelaTimes);
+    </script>
+  </body>
+</html>

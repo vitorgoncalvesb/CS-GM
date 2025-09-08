@@ -630,7 +630,7 @@ function mostrarModalSelecaoTime() {
   overlay.appendChild(modal);
   document.body.appendChild(overlay);
 
-  // Adiciona botões dos times com logo e descrição
+  // Adiciona botões dos times com logo
   const lista = modal.querySelector("#lista-times");
   TIMES_DISPONIVEIS.forEach((time) => {
     const btn = document.createElement("button");
@@ -651,17 +651,12 @@ function mostrarModalSelecaoTime() {
 
     // Logo fictício (adicione imagens reais se quiser)
     const logo = document.createElement("div");
-    logo.style.width = "48px";
-    logo.style.height = "48px";
-    logo.style.background = "#dbeafe";
-    logo.style.borderRadius = "50%";
-    logo.style.display = "flex";
-    logo.style.alignItems = "center";
-    logo.style.justifyContent = "center";
-    logo.style.fontWeight = "bold";
-    logo.style.fontSize = "1.2rem";
-    logo.style.marginBottom = "8px";
-    logo.textContent = time[0];
+    logo.className = "w-10 h-10 rounded-full bg-gray-600 flex items-center justify-center";
+    const img = document.createElement("img");
+    img.src = `assets/img/team-logos/${time}.webp`;
+    img.alt = `${time} logo`;
+    img.className = "w-8 h-8 border-gray-300 object-cover";
+    logo.appendChild(img);
 
     // Nome do time
     const nome = document.createElement("span");
@@ -669,16 +664,10 @@ function mostrarModalSelecaoTime() {
     nome.style.fontWeight = "bold";
     nome.style.fontSize = "1rem";
     nome.style.marginBottom = "2px";
-
-    // Descrição curta
-    const desc = document.createElement("span");
-    desc.textContent = `Elenco: ${JOGADORES_POR_TIME[time]?.length || 0} jogadores`;
-    desc.style.fontSize = "0.85rem";
-    desc.style.color = "#6b7280";
+    nome.style.whiteSpace = "nowrap";
 
     btn.appendChild(logo);
     btn.appendChild(nome);
-    btn.appendChild(desc);
 
     btn.onclick = () => {
       localStorage.setItem("timeSelecionado", time);

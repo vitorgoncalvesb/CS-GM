@@ -14,6 +14,11 @@
       rel="stylesheet"
     />
     <link rel="stylesheet" href="assets/css/style.css" />
+    <style>
+      td{
+        text-align: center;
+      }
+    </style>
   </head>
   <body class="bg-gray-100 text-gray-800">
     <header
@@ -26,19 +31,37 @@
         <a href="mercado.html" class="text-blue-600 font-semibold">Mercado</a>
         <a href="simulacao.html" class="hover:underline">Simulação</a>
         <a href="calendario.html" class="hover:underline">Calendário</a>
+        <a href="elencos.html" class="text-blue-600 font-semibold">Times</a>
         <a href="estatisticas.html" class="hover:underline">Estatísticas</a>
         <a href="financas.html" class="hover:underline">Finanças</a>
         <a href="configuracoes.html" class="hover:underline">Configurações</a>
       </nav>
     </header>
 
-    <main class="p-6 max-w-4xl mx-auto space-y-4">
-      <h2 class="text-xl font-bold mb-4">Jogadores Disponíveis</h2>
-      <div
-        id="orcamento-display"
-        class="mb-4 text-lg font-semibold text-green-700"
-      ></div>
-      <div id="mercado-lista" class="space-y-3"></div>
+
+    <main class="max-w-7xl mx-auto mt-8">
+      <div class="flex gap-4 border-b mb-4">
+        <button id="tab-free" class="tab-active px-4 py-2 font-semibold">Free Agents</button>
+        <button id="tab-all" class="tab-inactive px-4 py-2 font-semibold">Todos os Jogadores</button>
+      </div>
+      <div class="flex gap-4 mb-4">
+        <select id="filtro-idade" class="border rounded px-2 py-1">
+          <option value="">Idade</option>
+          <option value="asc">Mais novo</option>
+          <option value="desc">Mais velho</option>
+        </select>
+        <select id="filtro-overall" class="border rounded px-2 py-1">
+          <option value="">Overall</option>
+          <option value="desc">Maior Overall</option>
+          <option value="asc">Menor Overall</option>
+        </select>
+      </div>
+      <div class="table-scroll">
+        <table class="min-w-full bg-white rounded shadow border border-gray-200 text-xs" id="tabela-mercado">
+          <thead id="thead-mercado"></thead>
+          <tbody id="tbody-mercado"></tbody>
+        </table>
+      </div>
     </main>
 
     <footer class="text-center text-xs text-gray-500 mt-8 mb-4">
@@ -51,5 +74,90 @@
     <script src="assets/js/simulacao.js"></script>
     <script src="assets/js/historico.js"></script>
     <script src="assets/js/main.js"></script>
+    <script>
+    // --- Helpers ---
+    function calcularOverall(j) {
+      let soma = 0, n = 0;
+      [j.mira, j.clutch, j.hs, j.movimentacao, j.suporte, j.agressividade].forEach(v => { if(typeof v==="number") { soma+=v; n++; } });
+      return n ? Math.round(soma/n) : '-';
+    }
+    // --- Renderização ---
+    let abaAtual = 'free';
+    let filtroIdade = '', filtroOverall = '';
+    const theadFree = `<tr>
+      <th>Ações</th><th>Foto</th><th>Nome</th><th>Demanda</th><th>Posição</th><th>Idade</th><th>Aim</th><th>Clutch</th><th>Hs</th><th>Mov.</th><th>Suporte</th><th>Agress.</th><th>Overall</th><th>Potencial</th>
+    </tr>`;
+    const theadAll = `<tr>
+      <th>Ações</th><th>Foto</th><th>Nome</th><th>Demanda</th><th>Posição</th><th>Idade</th><th>Time</th><th>Aim</th><th>Clutch</th><th>Hs</th><th>Mov.</th><th>Suporte</th><th>Agress.</th><th>Overall</th><th>Potencial</th>
+    </tr>`;
+    function renderTabela() {
+      // Pega jogadores do mercado (todos os jogadores ativos exceto do usuário)
+      let mercado = (typeof jogadoresMercado !== 'undefined' && Array.isArray(jogadoresMercado)) ? jogadoresMercado : (JSON.parse(localStorage.getItem('mercado')||'[]'));
+      let jogadores = mercado.map(j => ({...j, overall: calcularOverall(j)}));
+      const meuTime = localStorage.getItem('timeSelecionado');
+      if (abaAtual === 'all') {
+        // Exibe todos os jogadores do mercado, exceto os do meu time
+        jogadores = jogadores.filter(j => j.time !== meuTime);
+      } else {
+        jogadores = jogadores.filter(j => !j.time);
+      }
+      // Filtros
+      if (filtroIdade) jogadores = jogadores.sort((a,b) => filtroIdade==='asc'?a.idade-b.idade:b.idade-a.idade);
+      if (filtroOverall) jogadores = jogadores.sort((a,b) => filtroOverall==='asc'?a.overall-b.overall:b.overall-a.overall);
+      // Render
+      document.getElementById('thead-mercado').innerHTML = abaAtual==='free'?theadFree:theadAll;
+      document.getElementById('tbody-mercado').innerHTML = jogadores.map(j => `
+        <tr>
+          <td>${!j.time?`<button class='oferecer-contrato bg-green-600 text-white px-2 py-1 rounded' data-nome='${j.nome}'>Oferecer Contrato</button>`:''}</td>
+          <td class="flex justify-center items-center"><img src="assets/img/${j.nome}.webp" class="h-8 w-8 rounded-full" onerror="this.src='assets/img/default.webp'"/></td>
+          <td>${j.nome}</td>
+          <td>${j.demandaContrato||'No Demands'}</td>
+          <td>${j.posicoes||j.funcao||'-'}</td>
+          <td>${j.idade||'-'}</td>
+          ${abaAtual==='all'?`<td>${j.time||'Free Agent'}</td>`:''}
+          <td>${j.mira||'-'}</td>
+          <td>${j.clutch||'-'}</td>
+          <td>${j.hs||'-'}</td>
+          <td>${j.movimentacao||'-'}</td>
+          <td>${j.suporte||'-'}</td>
+          <td>${j.agressividade||'-'}</td>
+          <td>${j.overall||'-'}</td>
+          <td>${j.potencial||'-'}</td>
+        </tr>
+      `).join('');
+    }
+    // --- Eventos de UI ---
+    document.getElementById('tab-free').onclick = function(){
+      abaAtual = 'free';
+      this.className = 'tab-active px-4 py-2 font-semibold';
+      document.getElementById('tab-all').className = 'tab-inactive px-4 py-2 font-semibold';
+      renderTabela();
+    };
+    document.getElementById('tab-all').onclick = function(){
+      abaAtual = 'all';
+      this.className = 'tab-active px-4 py-2 font-semibold';
+      document.getElementById('tab-free').className = 'tab-inactive px-4 py-2 font-semibold';
+      renderTabela();
+    };
+    document.getElementById('filtro-idade').onchange = function(){
+      filtroIdade = this.value;
+      renderTabela();
+    };
+    document.getElementById('filtro-overall').onchange = function(){
+      filtroOverall = this.value;
+      renderTabela();
+    };
+    // --- Oferecer Contrato ---
+    document.addEventListener('click',function(e){
+      if(e.target.classList.contains('oferecer-contrato')){
+        const nome = e.target.getAttribute('data-nome');
+        const mercado = (typeof jogadoresMercado !== 'undefined' && Array.isArray(jogadoresMercado)) ? jogadoresMercado : (JSON.parse(localStorage.getItem('mercado')||'[]'));
+        const jogador = mercado.find(j=>j.nome===nome);
+        if(jogador && typeof abrirModalProposta==='function') abrirModalProposta(jogador);
+      }
+    });
+    // --- Inicialização ---
+    renderTabela();
+    </script>
   </body>
 </html>
